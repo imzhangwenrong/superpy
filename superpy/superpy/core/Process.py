@@ -13,7 +13,14 @@ import sys, os, random, subprocess, logging, re, copy, time, threading, cPickle
 import traceback
 
 import PicklingXMLRPC, Forker, TaskInfo
-from superpy.utils import WindowsUtils, WindowsSubprocess, winprocess
+
+try:
+    from superpy.utils import WindowsUtils, WindowsSubprocess, winprocess
+except ImportError, e:
+    logging.debug('''
+    Unable to import Microsoft windows utilities due to exception: %s
+    This is not a problem if you are not running on windows.
+    ''' % str(e))
 
 def ChangeUser(domain, user, password):
     """Impersonate a different user.
@@ -911,7 +918,7 @@ def CallIt(obj, options=('Run','run','__call__')):
 class _ExampleForTest:
     "Class to illustrate how to use Process class."
 
-    def __init__(self, delay=0, func=sum, args=(42,)):
+    def __init__(self, delay=0, func=sum, args=[(42,)]):
         self.delay = delay
         self.func = func
         self.args = args

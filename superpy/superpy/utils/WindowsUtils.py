@@ -1,16 +1,21 @@
 """Module containing useful utitlies for windows machines.
 """
 
-import logging
+import logging, os
 
 try:
     import win32api, win32con, win32process
-except Exception, e:
-    logging.error('''
-    Could not import win32api, win32con, win32process due to exception:
-    %s
-    Have you installed python win32 tools?
-    ''' % str(e))
+except ImportError, e:
+    if (os.name in ['nt']):
+        logging.error('''
+        Could not import win32api, win32con, win32process due to exception:
+        %s
+        Have you installed python win32 tools?
+        ''' % str(e))
+    else:
+        logging.debug('''Unable to do import due to exception: %s
+        If you are not running on windows, this is not a problem.
+        ''')
 
 
 def SetPriority(priority, pid=None):
