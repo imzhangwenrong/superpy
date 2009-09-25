@@ -19,7 +19,7 @@ setup(
     description = "Parallel processing tools for supercomputing with python.",
     license = "MIT",
     keywords = "parallel, super, process",
-    requires = ['Pmw'],
+    install_requires = ['Pmw'],
     provides = ['superpy'],
     url = "http://code.google.com/p/superpy/",   # project home page
     long_description = """
@@ -35,8 +35,8 @@ Key features of superpy include:
     * GUI to launch, monitor, and kill remote tasks
     * GUI can automatically launch tasks every day, hour, etc.
     * Works on the Microsoft Windows operating system
-          o Can run as a windows service
-          o Jobs submitted to windows can run as submitting user
+    * Can run as a windows service
+    * Jobs submitted to windows can run as submitting user or as service user
     * Inputs/outputs are python objects via python pickle
     * Pure python implementation
     * Supports simple load-balancing to send tasks to best servers 
