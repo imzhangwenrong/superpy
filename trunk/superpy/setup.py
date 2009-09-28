@@ -20,6 +20,9 @@ setup(
     license = "MIT",
     keywords = "parallel, super, process",
     install_requires = ['Pmw'],
+    dependency_links = [
+        "http://superpy.googlecode.com/files/Pmw-1.3.2-py2.5.egg"
+    ],
     provides = ['superpy'],
     url = "http://code.google.com/p/superpy/",   # project home page
     long_description = """
