@@ -1,4 +1,5 @@
 #summary Frequently Asked Questions about Installing superpy
+#labels Featured,Phase-Deploy
 
 = How do I install superpy? =
 
@@ -11,4 +12,3 @@ There are a variety of ways:
 Make sure you have installed the python windows tools from https://sourceforge.net/projects/pywin32. Once easy_install supports pywin32, we will setup dependencies so this is not required.
 
 Also, you may want to see the section on setting up superpy as a windows service in [SuperpyDocs#Superpy_as_a_windows_service].
-
