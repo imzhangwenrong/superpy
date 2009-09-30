@@ -140,6 +140,7 @@ If desired, you can type "SpawnAsService.py --help" or use the Windows GUI to go
 
 Once you have superpy running as a service on a given machine, you can just send tasks to it without having to worry about spawning the server.
 
+Note: you will need the python windows extensions installed to use superpy on windows. See [http://code.google.com/p/superpy/wiki/InstallFAQ#Do_I_need_to_do_anything_special_on_windows? the install faq] for details. 
 
 = Detailed Documentation = 
 
