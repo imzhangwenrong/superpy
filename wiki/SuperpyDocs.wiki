@@ -21,7 +21,7 @@ Key features of superpy include:
     * Pure python implementation
     * Supports simple load-balancing to send tasks to best servers 
 
-You can use easy_install to try superpy via "easy_install superpy" or download a python egg from downloads.
+You can use easy_install to try superpy via "easy_install superpy" or download a python egg from [http://code.google.com/p/superpy/downloads/list downloads].
 
 = Example Usage =
 
