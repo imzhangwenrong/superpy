@@ -132,11 +132,11 @@ TaskHandle(
 
 An important feature of superpy is that it can run as a windows service. This means that superpy will always run in the background, get restarted when the machine reboots, and generally be available all the time to process requests. To install superpy as a service, start a command window (i.e., a DOS prompt), enter the Scripts directory of your python install (this is in c:/Python25/Scripts for me but may be different on your machine) and do the following:
 {{{
->>> SpawnAsService --start auto install
->>> SpawnAsService restart
+C:\Python25\Scripts> SpawnAsService --start auto install
+C:\Python25\Scripts> SpawnAsService restart
 }}}
 
-If desired, you can type "SpawnAsService.py --help" or use the Windows GUI to go to {{{Start-->Settings-->Control Panel-->Administrative Tools-->Services}}} and click on the superpy service to change the service parameters.
+If desired, you can type {{{SpawnAsService.py --help}}} or use the Windows GUI to go to {{{Start-->Settings-->Control Panel-->Administrative Tools-->Services}}} and click on the superpy service to change the service parameters.
 
 Once you have superpy running as a service on a given machine, you can just send tasks to it without having to worry about spawning the server.
 
