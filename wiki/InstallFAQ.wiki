@@ -1,6 +1,8 @@
 #summary Frequently Asked Questions about Installing superpy
 #labels Featured,Phase-Deploy
 
+<wiki:toc max_depth="5" />
+
 = How do I install superpy? =
 
 There are a variety of ways:
