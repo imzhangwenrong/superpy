@@ -11,17 +11,24 @@ Superpy distributes python programs across a cluster of machines or across multi
 
 Key features of superpy include:
 
-    * Send tasks to remote servers or to same machine via XML RPC call
-    * GUI to launch, monitor, and kill remote tasks
-    * GUI can automatically launch tasks every day, hour, etc.
-    * Works on the Microsoft Windows operating system
-      * Can run as a windows service
-      * Jobs submitted to windows can run as submitting user or as service user 
-    * Inputs/outputs are python objects via python pickle
-    * Pure python implementation
-    * Supports simple load-balancing to send tasks to best servers 
+ * Send tasks to remote servers or to same machine via XML RPC call
+ * GUI to launch, monitor, and kill remote tasks
+ * GUI can automatically launch tasks every day, hour, etc.
+ * Works on the Microsoft Windows operating system
+   * Can run as a windows service
+   * Jobs submitted to windows can run as submitting user or as service user
+ * Inputs/outputs are python objects via python pickle
+ * Pure python implementation
+ * Supports simple load-balancing to send tasks to best servers
 
-You can use easy_install to try superpy via "easy_install superpy" or download a python egg from [http://code.google.com/p/superpy/downloads/list downloads].
+The ultimate vision for superpy is that you:
+ 1. Install it as an always on service on a cloud of machines
+ 1. Use the superpy scheduler to easily send python jobs into the cloud as needed
+ 1. Use the {{{SuperWatch}}} GUI to track progress, kill tasks, etc.
+
+For smaller deployments, you can use superpy to take advantage of multiple processors on a single machine or multiple machines to maximize computing power.
+
+You can use [http://peak.telecommunity.com/DevCenter/EasyInstall easy_install] to try superpy via "easy_install superpy" or download a python egg from [http://code.google.com/p/superpy/downloads downloads].
 
 = Quick Start and Example Usage =
 
