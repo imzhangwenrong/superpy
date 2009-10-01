@@ -1,7 +1,7 @@
 """Module providing various tasks to be excuted remotely.
 """
 
-import os, ctypes, threading, subprocess, time, logging, sys, imp
+import os, threading, logging, sys, imp, stat
 import tempfile, smtplib, datetime
 from email import MIMEMultipart, MIMENonMultipart, Encoders
 from email.mime.text import MIMEText
@@ -154,7 +154,14 @@ class ServerSideTask(threading.Thread):
         This is the method you should override to have your task do something
         different.
         """
-        self.clientTask.Run()
+        logging.debug('%s start running client task' % self.Name())
+        try:
+            self.clientTask.Run()
+        except Exception, e:
+            logging.error('%s got exception running client task: %s\nre-raise'
+                          % (self.Name(), str(e)))
+            raise
+        logging.debug('%s finished running client task' % self.Name())
 
     def Die(self):
         """Should terminate the task if it is running.
@@ -283,11 +290,12 @@ class BasicTask:
         if (pidList):
             # Kill the proces using pywin32 and pid
             if (os.name == 'nt'):
-                import win32api, win32process
+                import win32api, win32process, win32con
                 for pid in pidList:
-                    logging.warning('Killing pid %s from pid %s' % (
-                        str(pid), os.getpid()))
-                    handle = win32api.OpenProcess(1, False, pid)
+                    logging.warning('Task: %s : killing pid %s from pid %s' % (
+                        self.Name(), str(pid), os.getpid()))
+                    handle = win32api.OpenProcess(
+                        1, win32con.PROCESS_TERMINATE, pid)
                     logging.warning('Killing pid %s' % str(pid))
                     win32process.TerminateProcess(handle, -1)
                     logging.warning('Finished killing pid %s' % str(pid))
@@ -315,6 +323,8 @@ class ImportPyTask(BasicTask):
 
     This class will import the given file name. After that, it will try
     to run methods in self.methodsToTry in the imported file.
+
+    This is useful for creating simple python scripts to run via superpy.
     """
 
     parameters = BasicTask.parameters + ['fileName']
@@ -358,8 +368,8 @@ class ImportPyTask(BasicTask):
                 if (hasattr(mod,name)):
                     methodToTry = getattr(mod,name)
                     if (callable(methodToTry)):
-                        methodToTry()
-                        self.result += ', did %s' % name
+                        methodResult = methodToTry()
+                        self.result += ', did %s, got %s' % (name, methodResult)
             self.result += ', done'            
         except Exception, e:
             try:
@@ -378,7 +388,17 @@ class ImportPyTask(BasicTask):
 
     run = Run # alias run to Run
 
-        
+    @staticmethod
+    def MakeSimpleScript(contents, fileName=None):
+        if (fileName is None):
+            fd, fileName = tempfile.mkstemp(suffix='_simpleScript.py')
+            os.write(fd, contents)
+            os.close(fd)
+        else:
+            open(fileName, 'wb').write(contents)
+        os.chmod(fileName, stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
+        return fileName
+            
 
 class ImpersonatingTask(BasicTask):
     """Class to run task as another user.
@@ -514,12 +534,25 @@ class ImpersonatingTask(BasicTask):
                         target=self.myTargetTask,fileInfo=fileInfo,
                         debug=False,credentials=self.cred,wait=wait,mode=myMode,
                         env=myEnv)
+                    logging.debug('Got result: %s from spawning task' % (
+                        str(result)))
                     return result
 
             self.remoteTask = Task(
                 self.targetTask,os.getenv('PYTHONPATH',None),self.credentials,
                 self.exe, self.workingDir, self.prependPaths)
-            self.result = self.remoteTask.run()
+            logging.debug('Running remoteTask for %s from server'
+                          % self.targetTask)
+            try:
+                self.result = self.remoteTask.run()
+            except Exception, e:
+                logging.warning(
+                    'got exception from running remoteTask %s: %s; re-raise' % (
+                    self.targetTask, str(e)))
+                raise
+            logging.debug(
+                'finished running remoteTask %s: got %s' % (
+                self.targetTask, str(e)))
         except Exception, e:
             self.result = 'Got Exception in Tasks.py: %s\n' % (str(e))
             if (reRaise):

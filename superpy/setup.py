@@ -1,7 +1,7 @@
 """Setup script for installing/distribuging package.
 """
 
-from misc.ez_setup import use_setuptools
+from superpyMisc.ez_setup import use_setuptools
 use_setuptools()
 
 
@@ -12,6 +12,7 @@ setup(
     #version = "1.1.0-p1" would be a post-release tag of -p1,    
     version = "1.1.0.dev",
     packages = find_packages(),
+    test_suite = 'superpyTesting',
     scripts = ['superpy/scripts/%s' %s for s in [
     'CleanOldTasks.py', 'ShowServer.py', 'Spawn.py', 'SpawnAsService.py',
     'StartSuperWatch.py']],
