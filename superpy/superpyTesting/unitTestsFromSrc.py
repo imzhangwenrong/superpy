@@ -7,17 +7,20 @@ here and automatically suck in the other doctests from the source.
 import unittest, doctest
 import superpy
 from superpy.core import Process, DataStructures
+import _test
 
 def MakeMainSuperpyDoctest():
     """Return a unittest.TestSuite object representing doctests from source code
+
+>>> import unitTestsFromSrc
+>>> t = unitTestsFromSrc.MakeMainSuperpyDoctest()
+>>> t.debug()
     """
     suite = unittest.TestSuite()
-    testCase = doctest.DocTestSuite(superpy)
-    suite.addTest(testCase)
-    testCase = doctest.DocTestSuite(Process)
-    suite.addTest(testCase)
-    testCase = doctest.DocTestSuite(DataStructures)
-    suite.addTest(testCase)
+
+    for t in [DataStructures, superpy, Process, _test]:
+        testCase = doctest.DocTestSuite(t)
+        suite.addTest(testCase)
 
     return suite
 
