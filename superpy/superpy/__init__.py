@@ -73,6 +73,7 @@ Entering service loop forever or until killed...
 >>> task = Tasks.ImpersonatingTask(
 ... name='example',targetTask=target,workingDir=os.getcwd())
 >>> handle = s.SubmitTaskToBestServer(task)
+>>> time.sleep(1) # give task a chance to get started
 >>> handle = handle.UpdatedHandle(timeout=3) # Try to quickly get update.
 >>> # The above should get a handle showing tasks status as not finished.
 >>> print handle # doctest: +ELLIPSIS
