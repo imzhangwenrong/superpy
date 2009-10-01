@@ -38,13 +38,15 @@ used in practice.
    not even have to do it at all if your servers start automatically
    as services).
    
-
 >>> from superpy.scripts import Spawn
->>> print '1:'; server1 = Spawn.SpawnServer(0, daemon=True) #doctest: +ELLIPSIS
-1:
+>>> try:
+...     server1 = Spawn.SpawnServer(0, daemon=True) #doctest: +ELLIPSIS
+...     server2 = Spawn.SpawnServer(0, daemon=True) #doctest: +ELLIPSIS
+...     import time; time.sleep(3) # wait for servers to start
+...     # The sleep is only necessary for doctest verfication .
+... except Exception, e:
+...     raise
 Entering service loop forever or until killed...
->>> print '2:'; server2 = Spawn.SpawnServer(0, daemon=True) #doctest: +ELLIPSIS
-2:
 Entering service loop forever or until killed...
     
     Next we instantiate an instance of the scheduler class and tell it

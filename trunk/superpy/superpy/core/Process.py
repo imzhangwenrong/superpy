@@ -748,7 +748,8 @@ False
 ...     pass
 ... 
 >>> credentials = {'user' : 'FIX', 'domain' : 'FIX', 'password' : 'FIX'}
->>> try: # The following won't work unless password is provided
+>>> # The following won't work unless password is provided
+>>> try: #doctest: +ELLIPSIS
 ...     t.SpawnTask(Process._DoubleSpawnExample(credentials=credentials),
 ...                 fileInfo, credentials=credentials, mode='createProcess')
 ... except Exception, e:
