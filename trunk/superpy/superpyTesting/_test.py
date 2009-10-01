@@ -19,9 +19,11 @@ class BasicTest(unittest.TestCase):
 ...     t.debug()
 ... 
 Entering service loop forever or until killed...
+HI
 Entering service loop forever or until killed...
 Entering service loop forever or until killed...
 Entering service loop forever or until killed...
+hello
 Entering service loop forever or until killed...
     """
 
@@ -106,6 +108,7 @@ def Go():
 '''     )
         task = Tasks.ImportPyTask(myScript,name='causeError')
         handle = self.scheduler.SubmitTaskToBestServer(task)
+        time.sleep(3) # Wait for things to get going
         handle = handle.WaitForUpdatedHandle()
 
         self.failUnless(handle.finished)
