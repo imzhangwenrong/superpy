@@ -748,14 +748,14 @@ False
 ...     pass
 ... 
 >>> credentials = {'user' : 'FIX', 'domain' : 'FIX', 'password' : 'FIX'}
->>> try:
+>>> try: # The following won't work unless password is provided
 ...     t.SpawnTask(Process._DoubleSpawnExample(credentials=credentials),
 ...                 fileInfo, credentials=credentials, mode='createProcess')
 ... except Exception, e:
 ...     print 'Got exception %s:\\n' % str(e)
 ...     print 'output log is:\\n' + open(outputLog,'r').read()
 ...
-Got exception (1326, 'LogonUser', 'Logon failure: unknown user name or bad password.'):
+Got exception ...
 <BLANKLINE>
 output log is:
 <BLANKLINE>
