@@ -288,22 +288,8 @@ class BasicTask:
 
         pidList = self.GetPids()
         if (pidList):
-            # Kill the proces using pywin32 and pid
-            if (os.name == 'nt'):
-                import win32api, win32process, win32con
-                for pid in pidList:
-                    logging.warning('Task: %s : killing pid %s from pid %s' % (
-                        self.Name(), str(pid), os.getpid()))
-                    handle = win32api.OpenProcess(
-                        1, win32con.PROCESS_TERMINATE, pid)
-                    logging.warning('Killing pid %s' % str(pid))
-                    win32process.TerminateProcess(handle, -1)
-                    logging.warning('Finished killing pid %s' % str(pid))
-                    win32api.CloseHandle(handle)
-
-            else:
-                raise Exception('Do not know how to kill on os.name=%s' % (
-                    str(os.name)))
+            for pid in pidList:
+                self._DoKill(pid)
         else:
             raise Exception('Task %s is unkillable (no pids).' % self.Name())
         
@@ -317,6 +303,26 @@ class BasicTask:
 
     def __repr__(self):
         return self._MakeRepr(self.__class__.parameters)
+
+    def _DoKill(self, pid):
+        "Kill the given pid on current os."
+
+        # Kill the proces using pywin32 and pid
+        logging.warning('Task: %s : killing pid %s from pid %s' % (
+            self.Name(), str(pid), os.getpid()))
+        logging.warning('Killing pid %s' % str(pid))        
+        if (os.name == 'nt'):
+            import win32api, win32process, win32con
+            handle = win32api.OpenProcess(
+                1, win32con.PROCESS_TERMINATE, pid)
+            win32process.TerminateProcess(handle, -1)
+            win32api.CloseHandle(handle)
+        elif hasattr(os, 'kill'):
+            os.kill(pid, signals.SIGABRT)
+        else:
+            raise Exception('Do not know how to kill on os.name=%s' % (
+                str(os.name)))
+        logging.warning('Finished killing pid %s' % str(pid))
 
 class ImportPyTask(BasicTask):
     """Task to import a python script.
@@ -552,7 +558,7 @@ class ImpersonatingTask(BasicTask):
                 raise
             logging.debug(
                 'finished running remoteTask %s: got %s' % (
-                self.targetTask, str(e)))
+                self.targetTask, self.result))
         except Exception, e:
             self.result = 'Got Exception in Tasks.py: %s\n' % (str(e))
             if (reRaise):

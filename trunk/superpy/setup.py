@@ -4,7 +4,6 @@
 from superpyMisc.ez_setup import use_setuptools
 use_setuptools()
 
-
 from setuptools import setup, find_packages
 setup(
     name = "superpy",
@@ -12,7 +11,7 @@ setup(
     #version = "1.1.0-p1" would be a post-release tag of -p1,    
     version = "1.1.0.dev",
     packages = find_packages(),
-    test_suite = 'superpyTesting',
+    test_suite = 'superpyTesting.unitTestsFromSrc.MakeMainSuperpyDoctest',
     scripts = ['superpy/scripts/%s' %s for s in [
     'CleanOldTasks.py', 'ShowServer.py', 'Spawn.py', 'SpawnAsService.py',
     'StartSuperWatch.py']],
