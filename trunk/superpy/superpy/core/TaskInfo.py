@@ -1,7 +1,7 @@
 """Module containing various classes to provide information about tasks.
 """
 
-import socket, xmlrpclib, logging, time, datetime, threading
+import socket, xmlrpclib, logging, time, datetime, threading, copy
 import PicklingXMLRPC
 
 class GenericProcessHandle:
@@ -116,6 +116,59 @@ class GenericProcessHandle:
         """Print a pretty version of self suitable for display.
         """
         raise NotImplementedError
+
+class InvalidHandle(GenericProcessHandle):
+    """Handle like object for cases when there is no valid handle.
+    """
+
+    def __init__(self, name, infoDict):
+        GenericProcessHandle.__init__(self)
+        self.name = name
+        self.infoDict = infoDict
+
+    def Name(self):
+        "Return name"
+        return self.name
+
+    @staticmethod
+    def _ComplainInvalid(func):
+        "Helper function to complain that invalid handle does not support func"
+        raise Exception('InvalidHandle does not support the %s method.'%func)
+        
+
+    def Kill(self):
+        "Not implemented for invalid handle"
+        self._ComplainInvalid('Kill')
+
+    def Cleanup(self):
+        "Not implemented for invalid handle"
+        self._ComplainInvalid('Cleanup')
+
+    def StaleP(self):
+        "InvalidHandle is never stale so just returns False."
+        return False
+
+    def UpdatedHandle(self,timeout=None,numAttempts=3,serverTimeout=None):
+        "Just return self since no need to update an invalid handle."
+        _ignore = timeout, numAttempts, serverTimeout
+        return self
+
+    def WaitForUpdatedHandle(self, waitInSeconds=10, pollTime=3, *args, **kw):
+        "Just return self since no need to update an invalid handle."
+        _ignore = waitInSeconds, pollTime, args, kw
+        return self
+
+    def Pretty(self):
+        "Return pretty version of self."
+        return 'InvalidHandle:\n    ' + ',\n    '.join([
+            '.%s=%s' % (n, repr(getattr(self,n))) for n in [
+            'name','infoDict']])
+
+    def StatusInfo(self):
+        "Return status info as required by GenericProcessHandle"
+        return copy.deepcopy(self.infoDict)
+    
+        
 
 class TaskHandle(GenericProcessHandle):
     """Handle representing information about a running task.
