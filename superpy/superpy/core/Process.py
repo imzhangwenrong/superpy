@@ -194,13 +194,16 @@ class RemoteProcess:
         assert retries >= 0
         assert pause > 0
         for i in range(1+retries):
+            cwd = os.path.abspath(cwd)
             logging.debug('Changing cwd to %s (attempt %i)' % (str(cwd),i+1))
             try:
                 os.chdir(cwd)
             except Exception, e:
                 pause = pause**i
-                logging.error('Got exception %s. Will retry after pausing %f'
-                              % (e, pause))
+                logging.error('''
+                Got exception in doing os.chdir(%s) in Process.py: %s.
+                Will retry after pausing %f
+                ''' % (cwd, e, pause))
                 time.sleep(pause)
         return os.getcwd()
 
@@ -605,7 +608,6 @@ class RemoteProcess:
         RETURNS:        COnnection to new child process.
         
         """
-
         if (mode == 'subprocess'):
             newEnv = copy.deepcopy(os.environ)
             if (fileInfo.remotePyPath is not None):
