@@ -462,6 +462,14 @@ class BasicRPCServer(PicklingXMLRPC.PicklingXMLRPCServer,
             except Exception, _e:
                 return 1 # couldn't figure it out so just say 1 cpu
 
+    def Host(self):
+        "Return name of host server is running on."
+        return self._host
+
+    def Port(self):
+        "Return port server is running on."
+        return self._port
+    
 
 class UpdateActivesCallback(Tasks.BasicCallback):
     """Callback to update active tasks in server.
