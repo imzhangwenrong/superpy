@@ -163,6 +163,11 @@ class BasicRPCServer(PicklingXMLRPC.PicklingXMLRPCServer,
         for name in self._RPCFunctions:
             self.register_function(getattr(self,name))
 
+    def __del__(self):
+        "Shutdown server. Usually called automatically by python."
+        
+        logging.info('Shutting down server at %s:%s' % (self._host, self._port))
+
     def Terminate(self):
         """Stop running.
 
