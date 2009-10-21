@@ -1,7 +1,9 @@
 """Module providing main fog computing tools.
 """
 
-import re, urllib
+import re, urllib, os, datetime, copy, logging
+from superpy.core import Manager, Tasks, Servers, TaskInfo
+from superpy.scripts import Spawn
 
 class FogSource:
     """Abstract class representing input source for FogMachine.
@@ -10,11 +12,14 @@ class FogSource:
     for GetWords to return a word frequency dictionary.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, config=None):
+        self.config = config
 
-    def GetWords(self):
+    def Run(self, config=None):
         """Return a dictionary representing word frequency from this source.
+
+        This method shall be called with an instance of a FoggerConfig which
+        can be None if the config was already provided previously.
 
         This method shall return a dictionary with string keys representing
         words or phrases and values of integers representing number of
@@ -22,6 +27,19 @@ class FogSource:
         """
         
         raise NotImplementedError
+
+    def Name(self):
+        """Return string name for the source.
+
+        This is used in tracking task names so each source INSTANCE should
+        ideally have its own name.
+        """
+        
+        raise NotImplementedError
+
+    def Remoteable(self):
+        """Return False if task should be run locally. Else return True.
+        """
 
     @staticmethod
     def _GetWordsFromFD(config, fd):
@@ -44,22 +62,43 @@ class WebSource(FogSource):
         FogSource.__init__(self)
         self.url = url
 
-    def GetWords(self, config):
+    def Remoteable(self):
+        "Return True so this can be run remotely."
+        return True
+
+    def Run(self, config=None):
+        if (config is None):
+            config = self.config
         opener = urllib.FancyURLopener({})
         fd = opener.open(self.url)
         return self._GetWordsFromFD(config, fd)
+
+    def Name(self):
+        "Return name based on url"
+        return '%s::%s' % (self.__class__.__name__, self.url)
 
 class FileSource(FogSource):
     """FogSource taking input from an existing file.
     """
 
-    def __init__(self, fileName):
+    def __init__(self, fileName, remoteable=False):
         FogSource.__init__(self)
         self.fileName = fileName
+        self.remoteable = remoteable
 
-    def GetWords(self, config):
+    def Remoteable(self):
+        "Return whether this is remoteable or not."
+        return self.remoteable
+
+    def Name(self):
+        "Return name based on file"
+        return '%s::%s' % (self.__class__.__name__, self.fileName)
+
+    def Run(self, config=None):
         """Override as required by FogSource.
         """
+        if (config is None):
+            config = self.config
         fd = open(self.fileName,'r')
         return self._GetWordsFromFD(config, fd)
 
@@ -68,9 +107,20 @@ class FogMachine:
     """
 
     def __init__(self, config, sources=(),):
+        self.wordCount = {}
         self.sources = list(sources)
         self.config = config
-        self.wordCount = {}
+        self.scheduler = self._MakeTaskScheduler(
+            self.config.superpy.serverList, self.config.superpy.localServers)
+        self._AddSourcesFromConfig()
+
+    def _AddSourcesFromConfig(self):
+        if (self.config.session.webSourceFile not in ['', 'None', None]):
+            sites = open(self.config.session.webSourceFile).read().split('\n')
+            for s in sites:
+                if (s.strip() != ''):
+                    logging.debug('Adding source for %s from config file.'%s)
+                    self.AddSource(WebSource(s))
 
     def Reset(self):
         """Reset state of FogMachine so you can run it again.
@@ -108,17 +158,101 @@ class FogMachine:
         PURPOSE:      Count the words in all sources.
         
         """
-        wordCount = {}
-        for source in self.sources:
-            sourceData = self.ProcessSource(source)
-            for (k, v) in sourceData.items():
-                if (k not in wordCount):
-                    wordCount[k] = 0
-                wordCount[k] += v
-        return wordCount
+        self.wordCount = {}
+        Manager.ProcessElements(
+            self.sources, lambda e: self.DispatchElement(e),
+            lambda e,r: self.ProcessResult(e,r))
+        return self.wordCount
 
-    def ProcessSource(self, source):
-        return source.GetWords(self.config)
+    def ProcessResult(self, element, result):
+        if (not isinstance(result, dict)):
+            raise TypeError(
+                'Got invalid result for element %s. Expected dict, got %s' % (
+                element, result))
+        
+        wordCount = self.wordCount
+        for (k, v) in result.items():
+            if (k not in wordCount):
+                wordCount[k] = 0
+                wordCount[k] += v
+
+    @staticmethod
+    def _MakeTaskScheduler(serverList, localServers):
+        """Make a task scheduler to submit superpy tasks to.
+
+        INPUTS:
+
+        -- serverList:  List of (host, port) pairs for existing servers.
+
+        -- localServers: Integer for how many local servers to start.
+        
+        -------------------------------------------------------
+        
+        RETURNS:        A superpy.core.Servers.Scheduler instance including
+                        all servers in serverList and locally started ones.
+        
+        -------------------------------------------------------
+        
+        PURPOSE:        This method creates a scheduler which knows about
+                        all the superpy servers given and can
+                        be used to submit tasks to them.
+        
+        """
+        serverList = copy.deepcopy(serverList)
+        if (serverList is None):
+            serverList = []
+        if (not isinstance(serverList,(list,tuple))):
+            raise TypeError('serverList must be a sequence but got %s' % (
+                str(serverList)))
+        for _servNum in range(localServers):
+            localServer = Spawn.SpawnServer(0, daemon=True)
+            serverList.append((localServer.Host(),localServer.Port()))
+            logging.info('Spawned local server at %s.' % str(serverList[-1]))
+        scheduler = Servers.Scheduler(serverList)
+        return scheduler
+
+
+    def _MakeTaskToRunSource(self, source):
+        workingDir = self.config.superpy.remoteWorkDir
+        if (source.config is None):
+            source.config = self.config
+        if (workingDir in ['', 'None', None]):
+            os.path.normpath(os.getcwd())
+        task = Tasks.ImpersonatingTask(
+            targetTask=source,
+            workingDir=workingDir,
+            domain=self.config.superpy.domain,
+            password=self.config.superpy.password,
+            user=self.config.superpy.user,
+            prependPaths=[self.config.superpy.remotePyPath.replace('\\','/')],
+            name='RemoteTest/pyfog/%s/%s/%s' % (
+            datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S'),
+            self.config.superpy.user, source.Name()),
+            mode='createProcess',
+            env={'USERNAME' : os.getenv('USER', os.getenv('USERNAME', None))},
+            wrapTask=True)
+        task.targetTask.pickleMode = 'h'
+        return task
+
+
+    def DispatchElement(self, element):
+        if (element.Remoteable()):
+            task = self._MakeTaskToRunSource(element)
+            handle = self.scheduler.SubmitTaskToBestServer(task)
+        else:
+            result = element.Run(self.config)
+            now = datetime.datetime.now()
+            handle = TaskInfo.StaticHandle(element.Name(), {
+                'starttime' : now,
+                'endtime' : now + datetime.timedelta(seconds=1),
+                'alive' : False,
+                'host' : 'localhost',
+                'port' : 0,
+                'mode' : 'finished',
+                'result' : result,
+                'pids' : []
+                })
+        return handle
     
     def MakeRankedResultList(self, numWords):
         if (not len(self.wordCount)):
@@ -149,17 +283,39 @@ class FogMachine:
     def _regr_test_simple():
         """Simple regression test for FogMachine.
 
->>> import os, shutil, tempfile, inspect
->>> import fogMaker, fogConfig
->>> import logging; logging.getLogger('').setLevel(logging.DEBUG)
+>>> import os, shutil, tempfile, inspect, sys, logging
+>>> logging.getLogger('').setLevel(logging.DEBUG)
+>>> netPyPath = os.path.abspath(os.getcwd() + '../../..')
+>>> if (os.name == 'nt'):
+...     import win32net
+...     drive, path = os.path.splitdrive(netPyPath)
+...     drive = win32net.NetUseGetInfo(None, drive, 0)['remote']
+...     netPyPath = drive + path
+... 
+>>> netPyPath = netPyPath.replace('%c'%92,'%c'%47)#replace \ with /
+>>> sys.path.insert(0, netPyPath)
+>>> from demos.pyfog import fogMaker, fogConfig
 >>> myDir = tempfile.mkdtemp(suffix='_fogTest')
+>>> fd, webFile = tempfile.mkstemp(dir=myDir,suffix='_web.txt')
+>>> _ignore = os.write(fd,'''
+... http://www.mit.edu/~emin/short_bio.html
+... ''')
+>>> os.close(fd)
 >>> fd, outFile = tempfile.mkstemp(dir=myDir,suffix='_output.txt')
 >>> os.close(fd)
 >>> fd, confFile = tempfile.mkstemp(dir=myDir,suffix='_fogConf.txt')
+>>> user = os.getenv('USER', os.getenv('USERNAME', 'unknown'))
 >>> _ignore = os.write(fd, '''
 ... logLevel=DEBUG
 ... maxWords=3
-... ''')
+... webSourceFile=%s
+... remotePyPath=%s
+... #If using some remote servers running as different usernames, you
+... #will need to provide username and password info.
+... #user=FIXME
+... #domain=FIXME
+... #password=FIXME
+... ''' % (webFile, netPyPath))
 >>> os.close(fd)
 >>> fd, sourceFile = tempfile.mkstemp(dir=myDir,suffix='_sourceData.txt')
 >>> _ignore = os.write(fd, inspect.getsource(fogConfig))
@@ -167,19 +323,21 @@ class FogMachine:
 >>> myConf = fogConfig.FoggerConfig(configFile=confFile)
 >>> myConf.Validate()
 >>> maker = fogMaker.FogMachine(myConf)
+Entering service loop forever or until killed...
+Entering service loop forever or until killed...
 >>> maker.AddSource(fogMaker.FileSource(sourceFile))
 >>> maker.AddSource(fogMaker.WebSource(
-... 'http://code.google.com/p/superpy/people/list'))
->>> maker.MakeFog()
+... 'http://www.mit.edu/~emin/long_bio.html'))
+>>> maker.MakeFog() #doctest: +ELLIPSIS
 Word                             hits         %         
-to                               35           2.60417%
-for                              29           2.15774%
-in                               26           1.93452%
->>> logging.warning('FIXME: need to make special web page for above test')
+to                               38           2...%
+def                              33           2...%
+if                               23           1...%
 >>> shutil.rmtree(myDir)
 >>> os.path.exists(myDir)
 False
         """
+
 
 
 def _test():
