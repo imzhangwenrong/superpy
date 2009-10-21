@@ -1,7 +1,7 @@
 """Module providing various tasks to be excuted remotely.
 """
 
-import os, threading, logging, sys, imp, stat
+import os, threading, logging, sys, imp, stat, time
 import tempfile, smtplib, datetime
 from email import MIMEMultipart, MIMENonMultipart, Encoders
 from email.mime.text import MIMEText
@@ -47,6 +47,21 @@ class ServerSideTask(threading.Thread):
         "Get the handle for the client task and return"
         
         assert None != self.clientTask.Name(), 'Task must have a name!.'
+
+        secsToWaitForCleanup = 5
+        while (self.started.isSet() and self.finished.isSet()
+               and self.isAlive() and secsToWaitForCleanup):
+            # Task in a weird state where it is technically finished
+            # but still alive. This can happen if cleanups after
+            # task finishes have not completed. So we wait a little
+            # while for cleanups to finish.
+            logging.debug('waiting for cleanup...')
+            time.sleep(.1)
+            secsToWaitForCleanup -= .1
+        if (self.started.isSet() and self.finished.isSet()
+            and self.isAlive()):
+            raise Exception('Task %s finsihed but still alive; cleanups fail'
+                            % self.clientTask.Name())
         result = TaskHandle(
             self.clientTask.Name(),self.started.isSet(),self.finished.isSet(),
             self.isAlive(),self.host,self.port,self.clientTask.result,
@@ -496,6 +511,29 @@ class ImpersonatingTask(BasicTask):
         self.exe = sys.executable
         self.mode = mode
         self.env = env
+        self._ValidateMode()
+
+    def _ValidateMode(self):
+        """Warn user if mode settings are weird and change if necessary.
+
+        The subprocess mode works pretty well if you are not doing a
+        change user. Thus, if you specify another mode and do not provide
+        a password, we force the mode to be subprocess so things will
+        not break due to lack of credentials.
+
+        This generally lets you specify a default mode of 'createProcess',
+        but if credentials are not provided then 'subprocess' gets used.
+        """
+        if (self.mode != 'subprocess'):
+            if (self.credentials is None or len(self.credentials) == 0
+                or self.credentials.get('password', None) is None):
+                logging.warning('''
+           Setting self.mode="subprocess" since no credentials given.
+           In this case, mode="subprocess" can work but
+           mode="%s" probably would not work.
+           ''' % self.mode)
+                self.mode = 'subprocess'
+
 
     def GetPids(self):
         "Return pid for local task and remote task."
