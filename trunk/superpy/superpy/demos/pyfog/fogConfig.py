@@ -1,4 +1,8 @@
 """Module representing configuration parameters.
+
+This module collects together configuration parameters for pyfog applications.
+If you are just looking at pyfog to get a sense of how to use superpy, you
+can pretty much ignore this module and just look at fogMaker.py.
 """
 
 import re, logging, os, optparse
@@ -142,12 +146,14 @@ class CountingSessionConfig(GenericConfig):
         'logLevel' : 'INFO',
         'outputFile' : '',
         'maxWords' : 30,
-        'serverList' : 'None',        
-        'domain' : '', 
-        'password' : '',
-        'killRegexp' : '''(<[^<>]+>)|([=.><,;:"'!?\[\]{}\\\\])|'''
+        'killRegexp' : '''(<[^<>]+>)|([=.><,;:"'!?\[\]{}\\\\])|''',
+        'webSourceFile' : '',
         }
 
+    @ConfProp
+    def webSourceFile(self):
+        """String name of file containing web sites to include as source.
+        """
 
     @ConfProp
     def logLevel(self):
@@ -165,6 +171,62 @@ class CountingSessionConfig(GenericConfig):
         """
 
     @ConfProp
+    def outputFile(self):
+        """File to write output to. If not given, output is sent to stdout.
+        """
+
+
+    def __init__(self, *args, **kw):
+        self._maxWords = None
+
+
+        GenericConfig.__init__(self, *args, **kw)
+        
+    def Validate(self):
+        """Validate arguments and raise exceptions if something is wrong.
+        """
+        self._maxWords = int(self._maxWords)
+
+class SuperpyConfig(GenericConfig):
+    """Configuration for superpy usage.
+    """
+
+    _defaults = {
+        'logLevel' : 'INFO',
+        'localServers' : 2,
+        'serverList' : 'None',        
+        'domain' : '', 
+        'password' : None,
+        'user' : '',
+        'remotePyPath' : os.getenv('PYTHONPATH',''),
+        'remoteWorkDir' : '',  
+        }
+
+    @ConfProp
+    def localServers(self):
+        """Integer representing number of local superpy servers to spawn.
+
+        In addition to using remove superpy servers, you can specify a
+        number of local servers to spawn. The application will spawn that
+        many servers, use them in processing, and shut them down when
+        finished.
+
+        This is mainly useful to take advantage of multi-processor or
+        multi-core machines by running multiple processes in parallel.
+        """
+
+    @ConfProp
+    def remotePyPath(self):
+        """PYTHONPATH to use on remote machines.
+        """
+
+    @ConfProp
+    def remoteWorkDir(self):
+        """Directory to change to for working in.
+        """
+
+
+    @ConfProp
     def serverList(self):
         """Either 'None' or comma separated list of host:port:re triples.
 
@@ -176,16 +238,6 @@ class CountingSessionConfig(GenericConfig):
         then the servers USBODV30 and USBODV31 would be used each with
         port number 9287. Of course, you must make sure a superpy server
         is listening at the appropriate place.
-
-        You can also provide regular expressions to force things matching
-        those regular expressions to be sent to specific servers. For example,
-
-          'USBODV30:9287:foobar,USBODV31:9287:barbaz,USBODV32:9287'
-
-        would send things matching foobar to USBODV30, things matching
-        barbaz to USBODV31 and send anything else to the next available
-        server. This feature is particularly useful if you want to force
-        a set of tests to run in order on a specific server.
         """
 
     @ConfProp
@@ -197,28 +249,36 @@ class CountingSessionConfig(GenericConfig):
         """
 
     @ConfProp
+    def user(self):
+        """Username to use for remote tasks via superpy.
+
+        This is used as the username when superpy is used to
+        spawn tests remotely. If nothing is given, we try
+        to read the default from the USERNAME or USER environment
+        variable.
+        """
+
+
+    @ConfProp
     def password(self):
         """Password used to spawn remote tasks.
         """
 
-    @ConfProp
-    def outputFile(self):
-        """File to write output to. If not given, output is sent to stdout.
-        """
-
 
     def __init__(self, *args, **kw):
-        self._logLevel = None
         self._serverList = None
-        self._outputFile = None
-        self._maxWords = None
+        self._localServers = None
+        self._user = None
+        self._password = None
 
         GenericConfig.__init__(self, *args, **kw)
         
     def Validate(self):
         """Validate arguments and raise exceptions if something is wrong.
         """
-        self._maxWords = int(self._maxWords)
+        self._localServers = int(self._localServers)
+        if (self._user in [None, 'None', '']):
+            self._user = os.getenv('USERNAME', os.getenv('USER', 'unknown'))
         if (self._serverList is None or self._serverList == 'None' or
             self._serverList == ''):
             self._serverList = None
@@ -235,6 +295,7 @@ class CountingSessionConfig(GenericConfig):
                 else:
                     raise Exception('Could not parse serverList element %s.'
                                     % str(origItem))
+
 
 def GetHome():
     """Determine and return home directory for user.
@@ -369,10 +430,14 @@ class FoggerConfig(MetaConfig):
     """MetaConfig object containing configuration for tester.
     """
 
-    _subconfigs_ = [('session', CountingSessionConfig)]
+    _subconfigs_ = [
+        ('session', CountingSessionConfig),
+        ('superpy', SuperpyConfig),
+        ]
     _conf_name_ = 'counter'
 
     def __init__(self, *args, **kw):
         self.session = CountingSessionConfig()
+        self.superpy = SuperpyConfig()
         MetaConfig.__init__(self, *args, **kw)
 
