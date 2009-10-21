@@ -105,7 +105,8 @@ class GenericProcessHandle:
         startTime = time.time()
         while (time.time() - startTime < waitInSeconds):
             handle = handle.UpdatedHandle(*args, **kw)
-            if (handle.finished):
+            info = handle.StatusInfo()
+            if (info['mode'] == 'finished'):
                 return handle
             else:
                 time.sleep(pollTime)
@@ -161,6 +162,58 @@ class InvalidHandle(GenericProcessHandle):
     def Pretty(self):
         "Return pretty version of self."
         return 'InvalidHandle:\n    ' + ',\n    '.join([
+            '.%s=%s' % (n, repr(getattr(self,n))) for n in [
+            'name','infoDict']])
+
+    def StatusInfo(self):
+        "Return status info as required by GenericProcessHandle"
+        return copy.deepcopy(self.infoDict)
+
+class StaticHandle(GenericProcessHandle):
+    """Handle like object for cases when task is already processed.
+    """
+
+    def __init__(self, name, infoDict):
+        GenericProcessHandle.__init__(self)
+        self.name = name
+        self.infoDict = infoDict
+
+    def Name(self):
+        "Return name"
+        return self.name
+
+    @staticmethod
+    def _ComplainInvalid(func):
+        "Helper function to complain that static handle does not support func"
+        raise Exception('StaticHandle does not support the %s method.'%func)
+        
+
+    def Kill(self):
+        "Not implemented for static handle"
+        self._ComplainInvalid('Kill')
+
+    def Cleanup(self):
+        "Just do nothing since nothing to cleanup."
+        pass
+
+
+    def StaleP(self):
+        "StaticHandle is never stale so just returns False."
+        return False
+
+    def UpdatedHandle(self,timeout=None,numAttempts=3,serverTimeout=None):
+        "Just return self since no need to update a static handle."
+        _ignore = timeout, numAttempts, serverTimeout
+        return self
+
+    def WaitForUpdatedHandle(self, waitInSeconds=10, pollTime=3, *args, **kw):
+        "Just return self since no need to update a static handle."
+        _ignore = waitInSeconds, pollTime, args, kw
+        return self
+
+    def Pretty(self):
+        "Return pretty version of self."
+        return 'StaticHandle:\n    ' + ',\n    '.join([
             '.%s=%s' % (n, repr(getattr(self,n))) for n in [
             'name','infoDict']])
 
@@ -272,7 +325,9 @@ class TaskHandle(GenericProcessHandle):
         for name in self.__dict__.keys():
             if ('_' != name[0]):
                 setattr(self,name,property(
-                    self._Invalid,self._Invalid,doc="This object is stale."))
+                    self._Invalid,self._Invalid,
+                    doc="Object is stale; last valid value for %s was %s"
+                    % (name,str(getattr(self,name)))))
         self._stale = True
         return result
 
@@ -318,12 +373,12 @@ class TaskHandle(GenericProcessHandle):
             return 'queued'
         if (self.alive): # started and alive
             if (self.finished): # should not be finished then
-                raise Exception('Weird status.')
+                raise Exception('Weird status: alive but finished too')
             else:
                 return 'running'
         else: # started but not alive, should be finished
             if (not self.finished): #should be alive then
-                raise Exception('Weird status.')
+                raise Exception('Weird status: not alive but finished')
             else:
                 return 'finished'
 
