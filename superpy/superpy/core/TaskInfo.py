@@ -173,10 +173,40 @@ class StaticHandle(GenericProcessHandle):
     """Handle like object for cases when task is already processed.
     """
 
-    def __init__(self, name, infoDict):
+    def __init__(self, name, infoDict=None):
+        """Initializer.
+        
+        INPUTS:
+        
+        -- name:       String name for handle. 
+        
+        -- infoDict=None:        Optional dictionary of status info as
+                                 StatusInfo method returns. Any items not
+                                 provided are filled in with reasonable
+                                 defaults.
+        
+        -------------------------------------------------------
+        
+        RETURNS:
+        
+        -------------------------------------------------------
+        
+        PURPOSE:
+        
+        """
         GenericProcessHandle.__init__(self)
         self.name = name
-        self.infoDict = infoDict
+        self.infoDict = dict(infoDict)
+
+        now = datetime.datetime.now()
+        defaults = {
+            'starttime' : now, 'endtime' : now + datetime.timedelta(seconds=1),
+            'alive' : False, 'host' : socket.gethostname(), 'port' : 0,
+            'mode' : 'finished', 'result' : None, 'pids' : []
+            }
+        for (k, v) in defaults:
+            if (k not in self.infoDict):
+                self.infoDict[k] = v
 
     def Name(self):
         "Return name"
