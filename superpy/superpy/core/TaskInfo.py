@@ -196,7 +196,7 @@ class StaticHandle(GenericProcessHandle):
             'alive' : False, 'host' : socket.gethostname(), 'port' : 0,
             'mode' : 'finished', 'result' : None, 'pids' : []
             }
-        for (k, v) in defaults:
+        for (k, v) in defaults.items():
             if (k not in self.infoDict):
                 self.infoDict[k] = v
 
