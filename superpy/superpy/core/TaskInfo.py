@@ -185,14 +185,6 @@ class StaticHandle(GenericProcessHandle):
                                  provided are filled in with reasonable
                                  defaults.
         
-        -------------------------------------------------------
-        
-        RETURNS:
-        
-        -------------------------------------------------------
-        
-        PURPOSE:
-        
         """
         GenericProcessHandle.__init__(self)
         self.name = name
