@@ -9,7 +9,7 @@ setup(
     name = "superpy",
     #version = "1.1.0.dev" would be a pre-release tag of dev,
     #version = "1.1.0-p1" would be a post-release tag of -p1,    
-    version = "1.1.0",
+    version = "1.2.0.dev",
     packages = find_packages(),
     test_suite = 'superpyTesting.unitTestsFromSrc.MakeMainSuperpyDoctest',
     scripts = ['superpy/scripts/%s' %s for s in [
