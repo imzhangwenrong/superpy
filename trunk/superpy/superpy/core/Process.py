@@ -578,7 +578,7 @@ class RemoteProcess:
                     newPeer.host,newPeer.port)
         except Exception, e:
             # Tell the child to die if we got an exception
-            logging.error('Killing child due to exception: %s' % str(e))
+            logging.error('Killing child %s due to exception: %s' % (target,e))
             connectionToChild.Die(newToken)
             raise
             
