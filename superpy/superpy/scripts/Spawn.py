@@ -6,7 +6,7 @@ import logging, sys
 
 from superpy.core import Servers
 
-def SpawnServer(targetPort=None, daemon=False):
+def SpawnServer(targetPort=None, daemon=False, **kw):
     """Spawn a new server on this machine.
     
     INPUTS:
@@ -18,7 +18,7 @@ def SpawnServer(targetPort=None, daemon=False):
     -- pythonPath=None:        Optional string to use for PYTHONPATH.
 
     """
-    server = Servers.BasicRPCServer(port = targetPort)
+    server = Servers.BasicRPCServer(port = targetPort, **kw)
     
     logging.info('sys.path is: ' + '\n'.join(sys.path))
     logging.info('port is %i' % server.socket.getsockname()[1])
