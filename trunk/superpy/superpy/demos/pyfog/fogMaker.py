@@ -1,7 +1,8 @@
 """Module providing main fog computing tools.
 """
 
-import re, urllib, os, datetime, copy, logging
+import re, urllib, os, datetime, copy, logging, codecs
+import feedparser
 from superpy.core import Manager, Tasks, Servers, TaskInfo
 from superpy.scripts import Spawn
 
@@ -12,8 +13,9 @@ class FogSource:
     for GetWords to return a word frequency dictionary.
     """
 
-    def __init__(self, config=None):
+    def __init__(self, config=None, traceDir=None):
         self.config = config
+        self.traceDir = traceDir
 
     def Run(self, config=None):
         """Return a dictionary representing word frequency from this source.
@@ -41,13 +43,26 @@ class FogSource:
         """Return False if task should be run locally. Else return True.
         """
 
-    @staticmethod
-    def _GetWordsFromFD(config, fd):
+    def _GetWordsFromFD(self, config, fd):
+        return self._GetWordsFromList(config, fd.read())
+
+    def _GetWordsFromList(self, config, data):
         result = {}
-        data = fd.read()
-        data = re.sub(config.session.killRegexp,'',data)
-        for word in data.split():
-            if (word == ''):
+        phraseLevel = config.session.phraseLevel
+        preKillData = codecs.encode(data, 'ascii', 'replace')
+        data = re.sub(config.session.killRegexp,'',preKillData)
+        if (self.traceDir is not None):
+            fileName = os.path.join(self.traceDir, re.sub(
+                '[^a-zA-Z0-9.]','_',self.Name()+'_preKill.txt'))
+            open(fileName, 'wb').write(preKillData)
+            fileName = os.path.join(self.traceDir, re.sub(
+                '[^a-zA-Z0-9.]','_',self.Name()+'_postKill.txt'))
+            open(fileName, 'wb').write(data)
+        data = data.split()
+        for i in range(phraseLevel,len(data)):
+            wordList = data[(i-phraseLevel):i]
+            word = ' '.join(wordList)
+            if (' ' in wordList or word.strip() == ''):
                 pass
             elif (word in result):
                 result[word] += 1
@@ -67,15 +82,58 @@ class WebSource(FogSource):
         return True
 
     def Run(self, config=None):
-        if (config is None):
-            config = self.config
-        opener = urllib.FancyURLopener({})
-        fd = opener.open(self.url)
-        return self._GetWordsFromFD(config, fd)
+        #FIXME: should provide better error handling if source fails to Run
+        try:
+            if (config is None):
+                config = self.config
+            opener = urllib.FancyURLopener({})
+            fd = opener.open(self.url)
+            result = self._GetWordsFromFD(config, fd)
+        except Exception, e:
+            logging.error('Got exception in fogMaker.py processing %s:\n%s\n'
+                          % (self.Name(), e))
+            raise
+        return result
 
     def Name(self):
         "Return name based on url"
         return '%s::%s' % (self.__class__.__name__, self.url)
+
+class RssSource(FogSource):
+
+    def __init__(self, url):
+        FogSource.__init__(self)
+        self.url = url
+
+    def Remoteable(self):
+        "Return True so this can be run remotely."
+        return True
+
+    def Run(self, config=None):
+        try:
+            if (config is None):
+                config = self.config
+            info = feedparser.parse(self.url)
+            if (info['bozo']):
+                msg = 'RSS feed for %s is malformed; skipping.' % self.url
+                logging.error(msg)
+            data = []
+            for e in info['entries']:
+                data.extend([
+                    e.title,
+                    e.summary #FIXME: some places have html crap in summary
+                    ])
+            result = self._GetWordsFromList(self.config, '\n'.join(data))
+        except Exception, e:
+            logging.error('Got exception in fogMaker.py processing %s:\n%s\n'
+                          % (self.Name(), e))
+            raise
+        return result
+
+    def Name(self):
+        "Return name based on url"
+        return '%s::%s' % (self.__class__.__name__, self.url)
+
 
 class FileSource(FogSource):
     """FogSource taking input from an existing file.
@@ -121,6 +179,12 @@ class FogMachine:
                 if (s.strip() != ''):
                     logging.debug('Adding source for %s from config file.'%s)
                     self.AddSource(WebSource(s))
+        if (self.config.session.rssSourceFile not in ['', 'None', None]):
+            sites = open(self.config.session.rssSourceFile).read().split('\n')
+            for s in sites:
+                if (s.strip() != ''):
+                    logging.debug('Adding source for %s from config file.'%s)
+                    self.AddSource(RssSource(s))                    
 
     def Reset(self):
         """Reset state of FogMachine so you can run it again.
@@ -160,21 +224,22 @@ class FogMachine:
         """
         self.wordCount = {}
         Manager.ProcessElements(
-            self.sources, lambda e: self.DispatchElement(e),
+            self.sources, Manager.DoNothing, lambda e: self.DispatchElement(e),
             lambda e,r: self.ProcessResult(e,r))
         return self.wordCount
 
     def ProcessResult(self, element, result):
         if (not isinstance(result, dict)):
-            raise TypeError(
-                'Got invalid result for element %s. Expected dict, got %s' % (
-                element, result))
-        
-        wordCount = self.wordCount
-        for (k, v) in result.items():
-            if (k not in wordCount):
-                wordCount[k] = 0
-                wordCount[k] += v
+            logging.error('''
+            Got invalid result for element %s. Expected dict, got %s.
+            Will ignore element %s and continue.''' % (
+                element.Name(), result, element.Name()))
+        else:
+            wordCount = self.wordCount
+            for (k, v) in result.items():
+                if (k not in wordCount):
+                    wordCount[k] = 0
+                    wordCount[k] += v
 
     @staticmethod
     def _MakeTaskScheduler(serverList, localServers):
@@ -205,7 +270,7 @@ class FogMachine:
             raise TypeError('serverList must be a sequence but got %s' % (
                 str(serverList)))
         for _servNum in range(localServers):
-            localServer = Spawn.SpawnServer(0, daemon=True)
+            localServer = Spawn.SpawnServer(0, daemon=True, logRequests=False)
             serverList.append((localServer.Host(),localServer.Port()))
             logging.info('Spawned local server at %s.' % str(serverList[-1]))
         scheduler = Servers.Scheduler(serverList)
@@ -276,7 +341,7 @@ class FogMachine:
         if (outputFile in ['', 'None', None]):
             print result
         else:
-            open(outputFile,'w').write(result)
+            open(outputFile,'wb').write(result)
         
         
     @staticmethod
@@ -294,7 +359,7 @@ class FogMachine:
 ... 
 >>> netPyPath = netPyPath.replace('%c'%92,'%c'%47)#replace \ with /
 >>> sys.path.insert(0, netPyPath)
->>> from demos.pyfog import fogMaker, fogConfig
+>>> from superpy.demos.pyfog import fogMaker, fogConfig
 >>> myDir = tempfile.mkdtemp(suffix='_fogTest')
 >>> fd, webFile = tempfile.mkstemp(dir=myDir,suffix='_web.txt')
 >>> _ignore = os.write(fd,'''
@@ -308,6 +373,7 @@ class FogMachine:
 >>> _ignore = os.write(fd, '''
 ... logLevel=DEBUG
 ... maxWords=3
+... phraseLevel=1
 ... webSourceFile=%s
 ... remotePyPath=%s
 ... #If using some remote servers running as different usernames, you
@@ -320,6 +386,7 @@ class FogMachine:
 >>> fd, sourceFile = tempfile.mkstemp(dir=myDir,suffix='_sourceData.txt')
 >>> _ignore = os.write(fd, inspect.getsource(fogConfig))
 >>> os.close(fd)
+>>> sys.argv = [''] # clear argv so config parsing does not get confused.
 >>> myConf = fogConfig.FoggerConfig(configFile=confFile)
 >>> myConf.Validate()
 >>> maker = fogMaker.FogMachine(myConf)
@@ -330,15 +397,13 @@ Entering service loop forever or until killed...
 ... 'http://www.mit.edu/~emin/long_bio.html'))
 >>> maker.MakeFog() #doctest: +ELLIPSIS
 Word                             hits         %         
-to                               38           2...%
-def                              33           2...%
-if                               23           1...%
+to                               41           2...%
+def                              36           2...%
+for                              31           1...%
 >>> shutil.rmtree(myDir)
 >>> os.path.exists(myDir)
 False
         """
-
-
 
 def _test():
     "Test docstrings"
