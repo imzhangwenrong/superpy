@@ -145,15 +145,39 @@ class CountingSessionConfig(GenericConfig):
     _defaults = {
         'logLevel' : 'INFO',
         'outputFile' : '',
+        'phraseLevel' : 2,
         'maxWords' : 30,
-        'killRegexp' : '''(<[^<>]+>)|([=.><,;:"'!?\[\]{}\\\\])|''',
+        'killRegexp' : '''(<[^<>]+>)|([=.><,;:"'!?\[\]{}\\\\])|(&nbsp)''',
+        'ignoreFile' : '',
         'webSourceFile' : '',
+        'rssSourceFile' : '',
         }
+
+    @ConfProp
+    def phraseLevel(self):
+        """Integer representing how many words to consider in a phrase.
+        """
 
     @ConfProp
     def webSourceFile(self):
         """String name of file containing web sites to include as source.
         """
+
+    @ConfProp
+    def rssSourceFile(self):
+        """Name of file containing web sites of rss feeds to use as source.
+        """
+
+
+    @ConfProp
+    def ignoreFile(self):
+        """String name of file containing patterns to ignore.
+
+        Each line of the file contains a regular expression. Anything matching
+        one of these regular expressions in the word counting stage will
+        be ignored.
+        """
+
 
     @ConfProp
     def logLevel(self):
@@ -178,6 +202,7 @@ class CountingSessionConfig(GenericConfig):
 
     def __init__(self, *args, **kw):
         self._maxWords = None
+        self._phraseLevel = None
 
 
         GenericConfig.__init__(self, *args, **kw)
@@ -186,6 +211,7 @@ class CountingSessionConfig(GenericConfig):
         """Validate arguments and raise exceptions if something is wrong.
         """
         self._maxWords = int(self._maxWords)
+        self._phraseLevel = int(self._phraseLevel)        
 
 class SuperpyConfig(GenericConfig):
     """Configuration for superpy usage.
