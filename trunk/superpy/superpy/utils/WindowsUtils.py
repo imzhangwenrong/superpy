@@ -48,3 +48,20 @@ def SetPriority(priority, pid=None):
         priority = getattr(win32process, priority)
     win32process.SetPriorityClass(handle, priority)
 
+def GetUNCPath(arg):
+    """Return full UNC path for a given local path.
+    
+    INPUTS:
+    
+    -- arg:        A local path to translate to UNC.
+    
+    -------------------------------------------------------
+    
+    RETURNS:    UNC path matching local path.
+    
+    """
+    drive, path = os.path.splitdrive(os.path.abspath(arg))
+    uncDrive = win32net.NetUseGetInfo(None, drive, 0)['remote']
+    fullUNCSrcPath = uncDrive + path
+    return fullUNCSrcPath
+    
