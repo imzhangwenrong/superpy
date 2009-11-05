@@ -4,7 +4,6 @@
 import Tkinter
 import Pmw
 import csv, datetime, logging, os, traceback, sys, threading, time, smtplib
-import traceback
 
 import GUIValidators, GUIUtils, Periodicity, SuperInfo, MsgWindow
 from superpy.core import Servers, Tasks
