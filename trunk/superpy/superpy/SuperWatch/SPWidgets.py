@@ -3,7 +3,7 @@
 
 import Tkinter
 import Pmw
-import csv, datetime, logging, os, traceback, sys, threading, time
+import csv, datetime, logging, os, traceback, sys, threading, time, smtplib
 
 import GUIValidators, GUIUtils, Periodicity, SuperInfo, MsgWindow
 from superpy.core import Servers, Tasks
@@ -83,6 +83,7 @@ class ConfigPage(HelperPage):
         confItems = [
             ('enableAutoRun', EnableScripts(argFrame)),
             ('servers', ServerConfItem(argFrame)),
+            ('smtp', SMTPConfItem(argFrame)),
             ('scripts', ScriptConfItem(argFrame)),
             ('logLevel', LogConfItem(argFrame)),
             ('pollFrequency', PollFrequency(argFrame)),
@@ -404,26 +405,7 @@ class ScriptPage(HelperPage):
                     logging.debug('%s:Checking whether to run %s...' % (
                         datetime.datetime.now(), script))
                     info = theDict.values()[0]
-                    try:
-                        Flash(dict(info.itemList)['autoRunAt'])
-                        if (info.enable.get() and info.period.ActivateP()):
-                            logging.info('Auto-activating script %s' % script)
-                            try: # Do a show to refresh status
-                                self.master.helpers['Servers'].ShowTask(info)
-                            except Exception, e:
-                                self.master.MakeWarning(
-                                    'update problem',
-                                    'Got exception when updating task %s:\n%s'
-                                    % (info.name, str(e)))
-                            self.master.helpers['Scripts'].Launch(info)
-                    except Exception, e:
-                        self.master.MakeWarning('autoRun invalid','''
-                        Got exception when checking auto run script %s:\n%s\n
-                        Will no longer try to auto-run it.
-                        Setting autoRun to invalid and not attempting auto run.
-                        ''' % (script, e))
-                        info.period = Periodicity.NoPeriod(None)
-                        info.autoRunAt.set('invalid')
+                    self._DoAutoRun(script, info)
         except Exception, e:
             logging.error('Got exception in CheckAutoRunScripts: %s' % str(e))
             errTrace = ('Exception of type \'' + `sys.exc_type` + '\':  \'' + 
@@ -431,6 +413,43 @@ class ScriptPage(HelperPage):
                         ''.join(traceback.format_tb(sys.exc_info()[2])),
                         sys.exc_info())
             GUIUtils.ComplainAboutException(e,errTrace,window=None)
+
+    def _DoAutoRun(self, script, info):
+        """Helper function to try to auto-run a given script.
+        
+        INPUTS:
+        
+        -- script:        Script to auto-run.
+        
+        -- info:          TaskInfo instance for script to run.
+        
+        -------------------------------------------------------
+        
+        PURPOSE:        Check whether to auto-activate script and so
+                        if it is time.
+        
+        """
+        try:
+            Flash(dict(info.itemList)['autoRunAt'])
+            if (info.enable.get() and info.period.ActivateP()):
+                logging.info('Auto-activating script %s' % script)
+                try: # Do a show to refresh status
+                    self.master.helpers['Servers'].ShowTask(info)
+                except Exception, e:
+                    self.master.MakeWarning(
+                        'update problem',
+                        'Got exception when updating task %s:\n%s'
+                        % (info.name, str(e)))
+                self.master.helpers['Scripts'].Launch(info)
+        except Exception, e:
+            self.master.MakeWarning('autoRun invalid','''
+            Got exception when checking auto run script %s:\n%s\n
+            Will no longer try to auto-run it.
+            Setting autoRun to invalid and not attempting auto run.
+            ''' % (script, e), email=True)
+            info.period = Periodicity.NoPeriod(None)
+            info.autoRunAt.set('invalid')
+
 
     def Launch(self, info, useSetServer=False):
         """Launch a script.
@@ -642,17 +661,29 @@ class MasterMonitor:
         self._DoUpdates()
         self.notebook.setnaturalsize()
 
-    def MakeWarning(self, title, detail):
+    def MakeWarning(self, title, detail, email=False):
         """Make a warning that gets logged and shows up in message window.
         
         INPUTS:
         
         -- title:        Short title for warning.
         
-        -- detail:       Detailed info for warning. 
+        -- detail:       Detailed info for warning.
+
+        -- email=False:  Whether to email user about the warning.
         
         """
         logging.warning(detail)
+        if (email):
+            smtp = self.GetParam('smtp')
+            user = self.GetParam('user')
+            if (smtp is not None and smtp.strip() not in ['','None']):
+                msg = 'Subject: %s\n\n%s' % (title, detail)
+                server = smtplib.SMTP(smtp)
+                #server.set_debuglevel(1) # uncomment for debug info
+                server.sendmail(user,[user],msg)
+                server.quit()
+
         self.msgWindow.MakeMsg(title, detail)
 
     def _MakeSuperWatchButtonFrame(self, rootWindow, quitCmd):
@@ -1160,6 +1191,24 @@ class ServerConfItem(ConfigItem):
         """
         ConfigItem.Apply(self, master)
         master.helpers['Servers'].ReloadServers(self.GetArg())
+
+class SMTPConfItem(ConfigItem):
+    '''Name of smtp server to use in sending emails.
+
+    For example, you might provide something like mysmtp.mydomain.com.
+
+    If this is non-empty, emails will be sent based on certain error
+    conditions.
+    '''
+
+    def __init__(self, argFrame):
+        ConfigItem.__init__(self, argFrame, 'smtp',
+                            GUIValidators.StringValidator())
+
+    def Apply(self, master):
+        """Override ConfigItem.Apply to also reload servers.
+        """
+        ConfigItem.Apply(self, master)
 
 class ScriptConfItem(ConfigItem):
     '''Path to a CSV file indicating scripts to run.
