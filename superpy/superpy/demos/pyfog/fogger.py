@@ -2,7 +2,7 @@
 """
 
 import os, logging
-import fogConfig, fogMaker
+from superpy.demos.pyfog import fogConfig, fogMaker
 
 def Run(args=None):
     """Run main fog maker.
