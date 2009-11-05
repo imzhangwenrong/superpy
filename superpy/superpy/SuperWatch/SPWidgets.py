@@ -660,6 +660,7 @@ class MasterMonitor:
         self._MakeHelperFrames()
         self._DoUpdates()
         self.notebook.setnaturalsize()
+        self._emailsSent = (datetime.date.today(), 0)
 
     def MakeWarning(self, title, detail, email=False):
         """Make a warning that gets logged and shows up in message window.
@@ -674,17 +675,26 @@ class MasterMonitor:
         
         """
         logging.warning(detail)
+        self.msgWindow.MakeMsg(title, detail)
+
         if (email):
             smtp = self.GetParam('smtp')
             user = self.GetParam('user')
             if (smtp is not None and smtp.strip() not in ['','None']):
+                if (self._emailsSent[1] > 100):
+                    if (self._emailsSent[0] == datetime.date.today()):
+                        logging.warning(
+                            'Already sent too many emails today. Not sending')
+                        return
+                    else:
+                        self._emailsSent[0] = datetime.date.today()
                 msg = 'Subject: %s\n\n%s' % (title, detail)
                 server = smtplib.SMTP(smtp)
                 #server.set_debuglevel(1) # uncomment for debug info
                 server.sendmail(user,[user],msg)
                 server.quit()
-
-        self.msgWindow.MakeMsg(title, detail)
+                self._emailsSent[1] += 1
+        
 
     def _MakeSuperWatchButtonFrame(self, rootWindow, quitCmd):
         """Make super watch buttons.
