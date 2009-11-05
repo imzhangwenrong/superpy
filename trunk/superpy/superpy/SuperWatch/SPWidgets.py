@@ -4,6 +4,7 @@
 import Tkinter
 import Pmw
 import csv, datetime, logging, os, traceback, sys, threading, time, smtplib
+import traceback
 
 import GUIValidators, GUIUtils, Periodicity, SuperInfo, MsgWindow
 from superpy.core import Servers, Tasks
@@ -442,11 +443,15 @@ class ScriptPage(HelperPage):
                         % (info.name, str(e)))
                 self.master.helpers['Scripts'].Launch(info)
         except Exception, e:
+            errTrace = ('Exception of type %s:\n%s\n%s\n%s\n' % (
+                str(sys.exc_type), e.__str__(), ''.join(
+                traceback.format_tb(sys.exc_info()[2])), sys.exc_info()))
             self.master.MakeWarning('autoRun invalid','''
             Got exception when checking auto run script %s:\n%s\n
             Will no longer try to auto-run it.
             Setting autoRun to invalid and not attempting auto run.
-            ''' % (script, e), email=True)
+            Traceback: %s
+            ''' % (script, e, errTrace), email=True)
             info.period = Periodicity.NoPeriod(None)
             info.autoRunAt.set('invalid')
 
@@ -660,7 +665,7 @@ class MasterMonitor:
         self._MakeHelperFrames()
         self._DoUpdates()
         self.notebook.setnaturalsize()
-        self._emailsSent = (datetime.date.today(), 0)
+        self._emailsSent = [datetime.date.today(), 0]
 
     def MakeWarning(self, title, detail, email=False):
         """Make a warning that gets logged and shows up in message window.
