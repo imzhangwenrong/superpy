@@ -2,7 +2,7 @@
 """
 
 import re, urllib, os, datetime, copy, logging, codecs
-import feedparser
+import feedparser, ignores
 from superpy.core import Manager, Tasks, Servers, TaskInfo
 from superpy.scripts import Spawn
 
@@ -16,12 +16,14 @@ class FogSource:
     def __init__(self, config=None, traceDir=None):
         self.config = config
         self.traceDir = traceDir
+        self.ignores = set(ignores.commonEnglish)
 
     def Run(self, config=None):
         """Return a dictionary representing word frequency from this source.
 
         This method shall be called with an instance of a FoggerConfig which
         can be None if the config was already provided previously.
+        Otherwise, we set self.config to the given config.
 
         This method shall return a dictionary with string keys representing
         words or phrases and values of integers representing number of
@@ -49,7 +51,16 @@ class FogSource:
     def _GetWordsFromList(self, config, data):
         result = {}
         phraseLevel = config.session.phraseLevel
-        preKillData = codecs.encode(data, 'ascii', 'replace')
+        preKillData = None
+        try:
+            preKillData = str(codecs.encode(data, 'ascii', 'replace'))
+        except Exception, e:
+            logging.warning(
+                "Can't decode data via codecs due to exception %s; retrying" %
+                (str(e)[0:256]))
+        if (preKillData is None):
+            preKillData = unicode(data, errors='replace').encode(
+                'ascii','ignore')
         data = re.sub(config.session.killRegexp,'',preKillData)
         if (self.traceDir is not None):
             fileName = os.path.join(self.traceDir, re.sub(
@@ -60,9 +71,10 @@ class FogSource:
             open(fileName, 'wb').write(data)
         data = data.split()
         for i in range(phraseLevel,len(data)):
-            wordList = data[(i-phraseLevel):i]
+            wordList = [w.lower() for w in data[(i-phraseLevel):i]]
+            wordList = [w for w in wordList if w not in self.ignores]
             word = ' '.join(wordList)
-            if (' ' in wordList or word.strip() == ''):
+            if (word.strip() == ''):
                 pass
             elif (word in result):
                 result[word] += 1
@@ -176,7 +188,7 @@ class FogMachine:
         if (self.config.session.webSourceFile not in ['', 'None', None]):
             sites = open(self.config.session.webSourceFile).read().split('\n')
             for s in sites:
-                if (s.strip() != ''):
+                if (s.strip() != '' and len(s) and s[0]!='#'):
                     logging.debug('Adding source for %s from config file.'%s)
                     self.AddSource(WebSource(s))
         if (self.config.session.rssSourceFile not in ['', 'None', None]):
@@ -279,8 +291,6 @@ class FogMachine:
 
     def _MakeTaskToRunSource(self, source):
         workingDir = self.config.superpy.remoteWorkDir
-        if (source.config is None):
-            source.config = self.config
         if (workingDir in ['', 'None', None]):
             os.path.normpath(os.getcwd())
         task = Tasks.ImpersonatingTask(
@@ -301,11 +311,14 @@ class FogMachine:
 
 
     def DispatchElement(self, element):
+        if (element.config is None):
+            element.config = self.config
+
         if (element.Remoteable()):
             task = self._MakeTaskToRunSource(element)
             handle = self.scheduler.SubmitTaskToBestServer(task)
         else:
-            result = element.Run(self.config)
+            result = element.Run()
             now = datetime.datetime.now()
             handle = TaskInfo.StaticHandle(element.Name(), {
                 'starttime' : now,
@@ -339,7 +352,7 @@ class FogMachine:
         outputFile = self.config.session.outputFile
         result = self.MakeRankedResultList(self.config.session.maxWords)
         if (outputFile in ['', 'None', None]):
-            print result
+            return result
         else:
             open(outputFile,'wb').write(result)
         
@@ -395,7 +408,7 @@ Entering service loop forever or until killed...
 >>> maker.AddSource(fogMaker.FileSource(sourceFile))
 >>> maker.AddSource(fogMaker.WebSource(
 ... 'http://www.mit.edu/~emin/long_bio.html'))
->>> maker.MakeFog() #doctest: +ELLIPSIS
+>>> print maker.MakeFog() #doctest: +ELLIPSIS
 Word                             hits         %         
 to                               41           2...%
 def                              36           2...%
