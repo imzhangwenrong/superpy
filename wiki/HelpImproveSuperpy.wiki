@@ -19,4 +19,4 @@ One of the original motivations of superpy was to have a relatively lightweight 
 
 = More Demos = 
 
-Superpy currently has a few demos as discussed at FIXME, but we could always user more.
+Superpy currently has a few demos as discussed at http://code.google.com/p/superpy/wiki/Demos, but we could always user more.
