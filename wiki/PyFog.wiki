@@ -12,3 +12,5 @@ http://superpy.googlecode.com/svn/wiki/PyFog.wiki.attach/pyfog.jpg
 If you quick on a question mark next to one of the parameters, a window will appear with information about that parameter. Once you have filled in the parameters as you like (or you can just leave the defaults), click OK to run PyFog. If you have started some superpy servers on your local machine and specified these in the serverList, PyFog will then send jobs to the remote machines. Otherwise, it will start a number of local servers to take advantage of the multiple processors on your machine. In any case, it will analyze the given sources and then show the frequency with which they occur as shown below.
 
 http://superpy.googlecode.com/svn/wiki/PyFog.wiki.attach/pyfog_results.jpg
+
+The default RSS example file provided simply scans RSS feeds for various news sources. This gives an interesting snapshot of what the key words for today's news are. Of course, you can provide whatever inputs you like. You could try to give a list of your 100 favorite books (or maybe the current top 100 books on Amazon) and see what are the key words that show up there.
