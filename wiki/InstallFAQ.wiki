@@ -19,4 +19,4 @@ Also, you may want to see the section on setting up superpy as a windows service
 
 = Where do I download Python? =
 
-You can download python from http://www.python.org/download.
+You can download python from http://www.python.org/download. Superpy has been tested mainly with version 2.5 of python but should work with most other versions as well.
