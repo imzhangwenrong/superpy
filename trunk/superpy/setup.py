@@ -9,14 +9,14 @@ setup(
     name = "superpy",
     #version = "1.1.0.dev" would be a pre-release tag of dev,
     #version = "1.1.0-p1" would be a post-release tag of -p1,    
-    version = "1.2.0",
+    version = "1.2.1",
     packages = find_packages(),
     package_dir = {'superpy.demos.pyfog' : 'superpy/demos/pyfog'},
     package_data={'superpy.demos.pyfog' : ['defaults/*.txt']},
     test_suite = 'superpyTesting.unitTestsFromSrc.MakeMainSuperpyDoctest',
     scripts = ['superpy/scripts/%s' %s for s in [
     'CleanOldTasks.py', 'ShowServer.py', 'Spawn.py', 'SpawnAsService.py',
-    'StartSuperWatch.py']],
+    'StartSuperWatch.py']] + ['superpy/demos/pyfog/fogGUI.py'],
     # metadata for upload to PyPI
     author = "Emin Martinian, Li Lee, Henry Xu",
     author_email = "emin.martinian@gmail.com",
