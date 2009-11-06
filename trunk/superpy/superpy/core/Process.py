@@ -10,17 +10,17 @@ for how to setup a server to listen and how to send it tasks.
 
 
 import sys, os, random, subprocess, logging, re, copy, time, threading, cPickle
-import traceback
+import traceback, socket
 
 import PicklingXMLRPC, Forker, TaskInfo
 
 try:
     from superpy.utils import WindowsUtils, WindowsSubprocess, winprocess
-except ImportError, e:
+except ImportError, importException:
     logging.debug('''
     Unable to import Microsoft windows utilities due to exception: %s
     This is not a problem if you are not running on windows.
-    ''' % str(e))
+    ''' % str(importException))
 
 def ChangeUser(domain, user, password):
     """Impersonate a different user.
@@ -198,12 +198,12 @@ class RemoteProcess:
             logging.debug('Changing cwd to %s (attempt %i)' % (str(cwd),i+1))
             try:
                 os.chdir(cwd)
-            except Exception, e:
+            except Exception, myException:
                 pause = pause**i
                 logging.error('''
                 Got exception in doing os.chdir(%s) in Process.py: %s.
                 Will retry after pausing %f
-                ''' % (cwd, e, pause))
+                ''' % (cwd, myException, pause))
                 time.sleep(pause)
         return os.getcwd()
 
@@ -232,10 +232,10 @@ class RemoteProcess:
                 logging.debug('setting %s=%s (attempt %i)' % (name,value,i+1))
                 try:
                     os.environ[name] = value
-                except Exception, e:
+                except Exception, myException:
                     pause = pause**i
                     logging.error('Got exception %s. Retry after pausing %f'
-                                  % (e, pause))
+                                  % (myException, pause))
                     time.sleep(pause)
 
 
@@ -563,13 +563,20 @@ class RemoteProcess:
                              connectionToChild.ShowPath(newToken))
                 logging.info('cwd of child is: %s' % fileInfo.workingDir)
             if (wait):
+                logging.debug('Asking child to process target...')
+                oldtimeout = socket.getdefaulttimeout()
+                sd = None # clear the timeout if wait is True
+                logging.debug('Making old timeout of %s to %s'%(oldtimeout,sd))
+                socket.setdefaulttimeout(sd) 
                 result = connectionToChild.ProcessObject(newToken,target)
                 logging.debug('Waiting for child...')
                 try:
                     connectionToChild.Die(newToken)
-                except Exception, e:
+                except Exception, myException:
                     logging.error('Ignoring error %s when asking child to die.'
-                                  % str(e))
+                                  % str(myException))
+                finally:
+                    socket.setdefaulttimeout(oldtimeout)
                 if (hasattr(childProc, 'wait')):
                     childProc.wait()
             else:
@@ -578,7 +585,8 @@ class RemoteProcess:
                     newPeer.host,newPeer.port)
         except Exception, e:
             # Tell the child to die if we got an exception
-            logging.error('Killing child %s due to exception: %s' % (target,e))
+            logging.error('Killing child %s due to exception: %s\n%s' % (
+                target,e,MakeErrTrace(e)))
             connectionToChild.Die(newToken)
             raise
             
@@ -921,7 +929,7 @@ def CallIt(obj, options=('Run','run','__call__')):
 class _ExampleForTest:
     "Class to illustrate how to use Process class."
 
-    def __init__(self, delay=0, func=sum, args=[(42,)]):
+    def __init__(self, delay=0, func=sum, args=((42,),)):
         self.delay = delay
         self.func = func
         self.args = args
