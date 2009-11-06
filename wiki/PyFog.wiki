@@ -14,3 +14,5 @@ If you quick on a question mark next to one of the parameters, a window will app
 http://superpy.googlecode.com/svn/wiki/PyFog.wiki.attach/pyfog_results.jpg
 
 The default RSS example file provided simply scans RSS feeds for various news sources. This gives an interesting snapshot of what the key words for today's news are. Of course, you can provide whatever inputs you like. You could try to give a list of your 100 favorite books (or maybe the current top 100 books on Amazon) and see what are the key words that show up there.
+
+By providing a large number of sources and experimenting with how long PyFog takes with different settings for the {{{localServers}}} parameter, you can get a sense of how well superpy exploits multiple processors on your machine. By spawning superpy processes on remote machines (using the Spawn.py or SpawnAsService.py scripts provided with superpy), you can see how much more quickly a cluster of machines can do at analyze word counts. For a task like that you may want to analyze larger sources such as books from Project Gutenberg.
