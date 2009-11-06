@@ -1,0 +1,10 @@
+#summary Discussion of various demonstrations of superpy capabilities.
+#labels Featured
+
+= Introduction =
+
+This page describes various demonstration applications. These demonstrations are intended both to illustrate some of the things one can do with python cloud-computing capabilities as well as provide programmers example code so they can implement their own applications.
+
+= PyFog =
+
+PyFog is a simple superpy application to create a cloud (or in this case a fog) of words based on some set of input documents. 
