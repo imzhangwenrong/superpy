@@ -22,7 +22,8 @@ def Run(args=None):
     logging.getLogger('').setLevel(getattr(logging,conf.session.logLevel))
     logging.info('Starting fogger.\n\tworking dir = %s\n' % os.getcwd())
     maker = fogMaker.FogMachine(conf)
-    maker.MakeFog()
+    return maker.MakeFog()
+    
     
 if __name__ == '__main__':
-    Run()
+    print Run()
