@@ -147,7 +147,7 @@ class CountingSessionConfig(GenericConfig):
         'outputFile' : '',
         'phraseLevel' : 2,
         'maxWords' : 30,
-        'killRegexp' : '''(<[^<>]+>)|([=.><,;:"'!?\[\]{}\\\\])|(&nbsp)''',
+        'killRegexp' : '''(<[^<>]+>)|([()=.><,;:"'!?\[\]{}\\\\])|(&nbsp)''',
         'ignoreFile' : '',
         'webSourceFile' : '',
         'rssSourceFile' : '',
@@ -219,7 +219,7 @@ class SuperpyConfig(GenericConfig):
 
     _defaults = {
         'logLevel' : 'INFO',
-        'localServers' : 2,
+        'localServers' : 4,
         'serverList' : 'None',        
         'domain' : '', 
         'password' : None,
@@ -314,10 +314,7 @@ class SuperpyConfig(GenericConfig):
             for origItem in myList.split(','):
                 item = origItem.split(':')
                 if (len(item) == 2):
-                    self._serverList.append((item[0], int(item[1]), None))
-                elif (len(item) == 3):
-                    self._serverList.append((item[0], int(item[1]),
-                                             re.compile(item[2])))
+                    self._serverList.append((item[0], int(item[1])))
                 else:
                     raise Exception('Could not parse serverList element %s.'
                                     % str(origItem))
