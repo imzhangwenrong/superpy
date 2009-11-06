@@ -2,7 +2,7 @@
 
 This lets you test things by doing something like
 
-  "python setup.py test -m superpy.demos.pyfog_testFogMaker"
+  "python setup.py test -m superpy.demos.pyfog._testFogMaker"
 
 from the top-level directory.
 """
