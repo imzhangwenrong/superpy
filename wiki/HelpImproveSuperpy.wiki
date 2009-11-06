@@ -1,4 +1,5 @@
 #summary Suggestions on new features and requests for developer help on improving superpy.
+#labels Featured
 
 = Introduction =
 
