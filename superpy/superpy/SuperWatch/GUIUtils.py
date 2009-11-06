@@ -87,6 +87,7 @@ def MakeTextDialog(title,text,grab=0,extraCommands=None,fontArgs=None):
     if (grab):
         window.tk.call('grab','set',window)
     window.lift()
+    return window
 
 class GenericGUICommand:
     """
@@ -119,14 +120,14 @@ class GenericGUICommand:
         self.argList = argList
         self.argDict = None    
 
-    def __call__(self):
+    def __call__(self, window=None):
         """
         __call__(self):
 
         Create a window to collect inputs for this command.
         """
         if (self.argList):
-            self.MakeWindow(self.argList, None)
+            return self.MakeWindow(self.argList, window)
         else:
             self.ProcessCommand(None)
 
@@ -225,9 +226,14 @@ class GenericGUICommand:
             label = Tkinter.Label(argFrame,text=name)
             menuEntry, self.argDict[name]['entry'] = validator.MakeMenuEntry(
                 argFrame)
-            _ignore = doc
+            def HelpInfo():
+                "Provide help on command."
+                MakeTextDialog(title='Help',text=doc, grab=0)
+                
+            helpButton = Tkinter.Button(argFrame,text='?',command=HelpInfo)
             label.grid(row=row, column=1)
             menuEntry.grid(row=row, column=2)
+            helpButton.grid(row=row, column=3)
 
         buttonFrame = Tkinter.Frame(window,relief='ridge',bd=6, height =30)
         okButton = Tkinter.Button(buttonFrame,text='OK',command=
@@ -243,6 +249,7 @@ class GenericGUICommand:
         buttonFrame.pack(side='top',fill='x',expand=1)
         for button in [okButton, cancelButton, helpButton]:
             button.pack(side='left',fill='x',expand=1)
+        return window
 
     def CancelCommand(self, window):
         "Cancel a command for window created by MakeWindow."
