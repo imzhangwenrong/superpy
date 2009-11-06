@@ -5,7 +5,7 @@ If you are just looking at pyfog to get a sense of how to use superpy, you
 can pretty much ignore this module and just look at fogMaker.py.
 """
 
-import re, logging, os, optparse
+import logging, os, optparse
 
 def ConfProp(func):
     """Decorator to make a config item property.
