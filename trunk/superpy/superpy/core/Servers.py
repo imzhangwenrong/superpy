@@ -72,6 +72,7 @@ class Scheduler:
             else:
                 loads.append((k, v, cpuLoad))
                 logging.debug('Got load of %s from %s:%s' % (loads[-1],k,v))
+                socket.setdefaulttimeout(oldtimeout)
             finally:
                 socket.setdefaulttimeout(oldtimeout)
                 
