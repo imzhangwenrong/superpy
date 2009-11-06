@@ -405,14 +405,16 @@ class FogMachine:
 >>> maker = fogMaker.FogMachine(myConf)
 Entering service loop forever or until killed...
 Entering service loop forever or until killed...
+Entering service loop forever or until killed...
+Entering service loop forever or until killed...
 >>> maker.AddSource(fogMaker.FileSource(sourceFile))
 >>> maker.AddSource(fogMaker.WebSource(
 ... 'http://www.mit.edu/~emin/long_bio.html'))
 >>> print maker.MakeFog() #doctest: +ELLIPSIS
 Word                             hits         %         
-to                               41           2...%
 def                              36           2...%
-for                              31           1...%
+none                             30           2...%
+name                             26           2...%
 >>> shutil.rmtree(myDir)
 >>> os.path.exists(myDir)
 False
