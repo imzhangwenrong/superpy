@@ -1,7 +1,8 @@
 """Module providing main fog computing tools.
 
 Generally, you should either use fogGUI.py or fogger.py if you just
-want to run pyfog.
+want to run pyfog. See docs at http://code.google.com/p/superpy/wiki/PyFog
+for how to run PyFog.
 """
 
 import re, urllib, os, datetime, copy, logging, codecs

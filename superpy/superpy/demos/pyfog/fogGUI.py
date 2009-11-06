@@ -1,4 +1,6 @@
 """Graphical User Interface for pyfog.
+
+See instructions at http://code.google.com/p/superpy/wiki/PyFog.
 """
 
 import sys, os

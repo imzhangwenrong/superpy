@@ -1,4 +1,6 @@
 """Module to run fog maker.
+
+See docs at http://code.google.com/p/superpy/wiki/PyFog for how to use PyFog.
 """
 
 import os, logging
