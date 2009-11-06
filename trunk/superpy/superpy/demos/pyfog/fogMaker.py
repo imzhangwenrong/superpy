@@ -1,4 +1,7 @@
 """Module providing main fog computing tools.
+
+Generally, you should either use fogGUI.py or fogger.py if you just
+want to run pyfog.
 """
 
 import re, urllib, os, datetime, copy, logging, codecs
@@ -46,9 +49,24 @@ class FogSource:
         """
 
     def _GetWordsFromFD(self, config, fd):
+        "Helper to read from file descriptor and call _GetWordsFromList"
         return self._GetWordsFromList(config, fd.read())
 
     def _GetWordsFromList(self, config, data):
+        """Helper method to get words from a list and process them.
+        
+        INPUTS:
+        
+        -- config:        Instance of fogConfig.FoggerConfig containing
+                          config information to use.      
+        
+        -- data:          List of strings representing data to count.
+        
+        -------------------------------------------------------
+        
+        RETURNS:        Dictionary of word/phrase counts.
+        
+        """
         result = {}
         phraseLevel = config.session.phraseLevel
         preKillData = None
@@ -84,6 +102,8 @@ class FogSource:
     
 
 class WebSource(FogSource):
+    """FogSource to read data from a web site.
+    """
 
     def __init__(self, url):
         FogSource.__init__(self)
@@ -94,7 +114,7 @@ class WebSource(FogSource):
         return True
 
     def Run(self, config=None):
-        #FIXME: should provide better error handling if source fails to Run
+        "Override as required by FogSource."
         try:
             if (config is None):
                 config = self.config
@@ -112,6 +132,8 @@ class WebSource(FogSource):
         return '%s::%s' % (self.__class__.__name__, self.url)
 
 class RssSource(FogSource):
+    """FogSource to read data from an RSS feed.
+    """
 
     def __init__(self, url):
         FogSource.__init__(self)
@@ -122,6 +144,7 @@ class RssSource(FogSource):
         return True
 
     def Run(self, config=None):
+        "Override as required by FogSource."
         try:
             if (config is None):
                 config = self.config
@@ -133,7 +156,7 @@ class RssSource(FogSource):
             for e in info['entries']:
                 data.extend([
                     e.title,
-                    e.summary #FIXME: some places have html crap in summary
+                    e.summary 
                     ])
             result = self._GetWordsFromList(self.config, '\n'.join(data))
         except Exception, e:
@@ -185,6 +208,8 @@ class FogMachine:
         self._AddSourcesFromConfig()
 
     def _AddSourcesFromConfig(self):
+        """Look at self.config and add any sourcs listed there.
+        """
         if (self.config.session.webSourceFile not in ['', 'None', None]):
             sites = open(self.config.session.webSourceFile).read().split('\n')
             for s in sites:
@@ -241,6 +266,20 @@ class FogMachine:
         return self.wordCount
 
     def ProcessResult(self, element, result):
+        """Take a FogSource and the result of running it and process it.
+        
+        INPUTS:
+        
+        -- element:        FogSource that we have run.
+        
+        -- result:         Results of running element.
+        
+        -------------------------------------------------------
+        
+        PURPOSE:        Update self.wordCount based on given result.
+        
+        """
+        
         if (not isinstance(result, dict)):
             logging.error('''
             Got invalid result for element %s. Expected dict, got %s.
@@ -290,6 +329,8 @@ class FogMachine:
 
 
     def _MakeTaskToRunSource(self, source):
+        """Helper method to create superpy task to run the given FogSource.
+        """
         workingDir = self.config.superpy.remoteWorkDir
         if (workingDir in ['', 'None', None]):
             os.path.normpath(os.getcwd())
@@ -311,6 +352,8 @@ class FogMachine:
 
 
     def DispatchElement(self, element):
+        """Dispatch a FogSource to as required by superpy.core.Manager.
+        """
         if (element.config is None):
             element.config = self.config
 
@@ -333,6 +376,22 @@ class FogMachine:
         return handle
     
     def MakeRankedResultList(self, numWords):
+        """Helper method to make ranked list of results.
+        
+        INPUTS:
+        
+        -- numWords:        Maximum number of words to show data for.
+        
+        -------------------------------------------------------
+        
+        RETURNS:        Results or processing given soures formatted
+                        as string showing a table of results.
+        
+        -------------------------------------------------------
+        
+        PURPOSE:        Helper for MakeFog to make main output data.
+        
+        """
         if (not len(self.wordCount)):
             self.wordCount = self.CountWords()
 
@@ -349,6 +408,8 @@ class FogMachine:
         return '\n'.join(result)
 
     def MakeFog(self):
+        """Top level method to process data and return result.
+        """
         outputFile = self.config.session.outputFile
         result = self.MakeRankedResultList(self.config.session.maxWords)
         if (outputFile in ['', 'None', None]):
