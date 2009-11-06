@@ -4,8 +4,8 @@
 import sys, os
 import Tkinter
 from superpy.SuperWatch import GUIUtils, GUIValidators
-from superpy.demos.pyfog import defaults
-import fogger
+from superpy.demos.pyfog import defaults, fogger
+
 
 
 class PyFogCmd(GUIUtils.GenericGUICommand):
