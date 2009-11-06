@@ -6,6 +6,6 @@
 PyFog is a simple superpy application to create a cloud (or in this case a fog) of words based on some set of input documents. You can provide lists of web pages, files, or RSS feeds and PyFog? will crawl them in parallel, count how often each word or group of words occurs, and display statistics on the most common words. 
 
 
-http://superpy.googlecode.com/svn/wiki/PyFog.attach/pyfog.jpg
+http://superpy.googlecode.com/svn/wiki/PyFog.wiki.attach/pyfog.jpg
 
-http://superpy.googlecode.com/svn/wiki/PyFog.attach/pyfog_results.jpg
+http://superpy.googlecode.com/svn/wiki/PyFog.wiki.attach/pyfog_results.jpg
