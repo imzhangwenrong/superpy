@@ -1015,7 +1015,15 @@ class PickledTaskWrapper:
         unpickled = cPickle.loads(self.target)
         result = CallIt(unpickled)
         self.reprTarget = repr(unpickled)
-        self.target = cPickle.dumps(unpickled)
+        try:
+            self.target = cPickle.dumps(unpickled)
+        except Exception, myExc:
+            msg = 'Got Exception when trying to pickle self.target:\n%s' % (
+                '\n'.join([str(self.target),'Exception info:',str(myExc),
+                           MakeErrTrace(myExc)]))
+            logging.error(msg)
+            raise Exception(msg)
+
         if (self.pickleResult):
             if (self.pickleMode == 's'):
                 result = cPickle.dumps(result)
