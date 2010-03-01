@@ -72,7 +72,10 @@ class SuperpyService(win32serviceutil.ServiceFramework):
             except Exception, e:
                 logging.error(
                     'Unable to remove log file due to error: %s' %str(e) )
-        logging.basicConfig(filename=logFile, level=logging.DEBUG)
+        handler = logging.handlers.RotatingFileHandler(
+            logFile, maxBytes=20000000, backupCount=2)
+        logging.getLogger('').addHandler(handler)
+        
 
 if __name__ == '__main__':
     win32serviceutil.HandleCommandLine(SuperpyService)
