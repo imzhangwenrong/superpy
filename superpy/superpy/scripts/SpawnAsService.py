@@ -12,7 +12,7 @@ SpawnAsService.py stop
 SpawnAsService.py debug
 """
 
-import os, sys, logging
+import os, sys, logging, logging.handlers
 import win32serviceutil, win32service, win32event
 
 from superpy.scripts import Spawn
