@@ -39,17 +39,12 @@ class SuperpyService(win32serviceutil.ServiceFramework):
     def SvcDoRun(self):
         "Start the service."
 
-        self.SetupLogging()
+        handler = self.SetupLogging()
 
         WindowsUtils.SetPriority('REALTIME_PRIORITY_CLASS')
-        stdoutFile = config.serviceStdoutFile 
-        stderrFile = config.serviceStderrFile 
-        stdout = file(stdoutFile, 'w', 0)
-        stderr = file(stderrFile, 'w', 0)
-        logging.info('Redirect stdout and stderr to %s and %s' %
-                     (stdoutFile, stderrFile))
-        sys.stdout = stdout
-        sys.stderr = stderr
+        logging.info('Redirect stdout and stderr to handler.')
+        sys.stdout = handler.stream
+        sys.stderr = handler.stream
         _server = Spawn.SpawnServer(daemon=True)
 
         logging.info('Running until we see service stop event')
@@ -75,7 +70,7 @@ class SuperpyService(win32serviceutil.ServiceFramework):
         handler = logging.handlers.RotatingFileHandler(
             logFile, maxBytes=20000000, backupCount=2)
         logging.getLogger('').addHandler(handler)
-        
+        return handler
 
 if __name__ == '__main__':
     win32serviceutil.HandleCommandLine(SuperpyService)
