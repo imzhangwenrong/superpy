@@ -60,6 +60,9 @@ class SuperpyService(win32serviceutil.ServiceFramework):
     def SetupLogging():
         "Arrange output to go to log file."
 
+        logging.getLogger('').setLevel(config.defaultLogLevel)
+        logging.info('Set log level to %s from config.'%config.defaultLogLevel)
+
         logFile = config.serviceLogFile
         if (os.path.exists(logFile)):
             try:

@@ -9,7 +9,7 @@ setup(
     name = "superpy",
     #version = "1.1.0.dev" would be a pre-release tag of dev,
     #version = "1.1.0-p1" would be a post-release tag of -p1,    
-    version = "1.2.2",
+    version = "1.2.3",
     packages = find_packages(),
     package_dir = {'superpy.demos.pyfog' : 'superpy/demos/pyfog'},
     package_data={'superpy.demos.pyfog' : ['defaults/*.txt']},
