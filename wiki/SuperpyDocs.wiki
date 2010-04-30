@@ -153,12 +153,12 @@ Note: you will need the python windows extensions installed to use superpy on wi
 
 On certain versions of windows, superpy's ability to run a process as the submitting user requires you to assign certain rights to the user running superpy. If you get errors about required privileges for running {{{CreateProcessAsUser}}} (e.g., "A required privilege is not held by the client") then you need to do the following. To assign user rights to an account on the local computer do:
 
- 1. From the Start menu, point to Administrative Tools, and then click Local Security Policy.
+ 1. From the Start Menu click on Settings-->Control Panel, select Administrative Tools, and then click Local Security Policy.
  1. In the Local Security Settings dialog box, double-click Local Policies, and then double-click User Rights Assignment.
  1. In the details pane, double-click Adjust memory quotas for a process. This is the SE_INCREASE_QUOTA_NAME user right.
- 1. Click Add User or Group, and, in the Enter the object names to select box, type the user or group name to which you want to assign the user right, and then click OK.
+ 1. Click Add User or Group, and, in the Enter the object names to select box, type the user or group name to which you want to assign the user right, and then click OK. Generally, you should add the user that will be running superpy as a service.
  1. Click OK again, and then, in the details pane, double-click Replace a process level token. This is the SE_ASSIGNPRIMARYTOKEN_NAME user right.
- 1. Click Add User or Group, and, in the Enter the object names to select box, type the user or group name to which you want to assign the user right, and then click OK.
+ 1. Click Add User or Group, and, in the Enter the object names to select box, type the user or group name to which you want to assign the user right, and then click OK. Generally, you should add the user that will be running superpy as a service.
 
 
 
