@@ -3,7 +3,7 @@
 
 import logging, socket, time
 
-import Servers, PicklingXMLRPC
+from superpy.core import Servers, PicklingXMLRPC
 
 def Show(host=None,port=None):
     """Show all tasks running on given host and port.
