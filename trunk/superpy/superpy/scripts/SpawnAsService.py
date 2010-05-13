@@ -11,13 +11,62 @@ SpawnAsService.py start
 SpawnAsService.py stop
 SpawnAsService.py debug
 """
-
-import os, sys, logging, logging.handlers
+# do not import logging or logging.handler just yet
+import sys
 import win32serviceutil, win32service, win32event
 
 from superpy.scripts import Spawn
 from superpy.utils import WindowsUtils
 from superpy.core import config
+
+class RotatedFile:
+    """
+    A file based stream implementation.
+    
+    It opens a file in mode 'a+' and never close or redirect to other files,
+    so that its  reference can be kept as stdout and stderr.
+    
+    When the file gets full, it truncate the beginning of the file and save
+    the last part (the tail) to make more space.
+    
+    The beginning of the file will be lost but it's the tail that is more
+    relavant and kept.
+    """
+    def __init__(self, fName, size = 20000000, tail = None):
+        """
+        fName is the full path-and-name of the file
+        size is the max bytes allowed for this file
+        tail specifies how many bytes at the end of the file should be kept
+        when rotating. if tail is None or larger than size, half of the size
+        will be kept.
+        """
+        self._file = file(fName, 'a+')
+        self._size = size
+        self._tail = tail
+        if self._tail is None or self._tail >= self._size:
+            self._tail = self._size / 2
+        
+    def _File(self):
+        """
+        truncate and keep the tail
+        """
+        self._file.seek(0, 2)
+        size = self._file.tell()
+        if size > self._size:
+            self._file.seek(-self._tail, 2)
+            tail = self._file.read()
+            self._file.truncate(0)
+            self._file.write(tail)
+            self._file.flush()
+        return self._file
+        
+    def __getattr__(self, name):
+        if name in ['__init__', '_File', '__getattr__', '__getattribute__']:
+            return getattr(self, name)
+        return getattr(self._File(), name)        
+
+    def __getattribute__(self, name):
+        return self.__getattr__(name)
 
 class SuperpyService(win32serviceutil.ServiceFramework):
     """Class to act as superpy service.
@@ -39,14 +88,12 @@ class SuperpyService(win32serviceutil.ServiceFramework):
     def SvcDoRun(self):
         "Start the service."
 
-        handler = self.SetupLogging()
+        self.SetupLogging()
 
         WindowsUtils.SetPriority('REALTIME_PRIORITY_CLASS')
-        logging.info('Redirect stdout and stderr to handler.')
-        sys.stdout = handler.stream
-        sys.stderr = handler.stream
         _server = Spawn.SpawnServer(daemon=True)
 
+        import logging
         logging.info('Running until we see service stop event')
         # Now just wait for a stop request
         win32event.WaitForSingleObject(self.hWaitStop, win32event.INFINITE)
@@ -59,21 +106,18 @@ class SuperpyService(win32serviceutil.ServiceFramework):
     @staticmethod
     def SetupLogging():
         "Arrange output to go to log file."
+        logFile = config.serviceLogFile
+        logFile = RotatedFile(logFile)
+        sys.stdout = logFile
+        sys.stderr = logFile
+        import logging, logging.handlers
+        handler = logging.StreamHandler(logFile)
+        logging.getLogger('').addHandler(handler)
 
         logging.getLogger('').setLevel(config.defaultLogLevel)
         logging.info('Set log level to %s from config.'%config.defaultLogLevel)
 
-        logFile = config.serviceLogFile
-        if (os.path.exists(logFile)):
-            try:
-                os.remove(logFile)
-            except Exception, e:
-                logging.error(
-                    'Unable to remove log file due to error: %s' %str(e) )
-        handler = logging.handlers.RotatingFileHandler(
-            logFile, maxBytes=20000000, backupCount=2)
-        logging.getLogger('').addHandler(handler)
-        return handler
+        logging.info('Redirected stdout and stderr to %s'%logFile.name)
 
 if __name__ == '__main__':
     win32serviceutil.HandleCommandLine(SuperpyService)
