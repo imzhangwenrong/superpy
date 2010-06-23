@@ -170,12 +170,12 @@ class BooleanPulldownValidator(ChooseOneFromListValidator):
 
     def Validate(self,arg):
         "Validate boolean"
-        if (0 == arg or 'False' == arg):
+        if (arg is False or arg in [0, '0', 'False']):
             return False
-        elif (1 == arg or 'True' == arg):
+        elif (arg is True or arg in [1, '1', 'True']):
             return True
         else:
-            raise Exception, ('Must be one of ["True","False"].')
+            raise Exception, ('Must be one of ["True","False"] or [0, 1].')
 
 class LogLevelValidator(ChooseOneFromListValidator):
     "Validator to choose log level"
