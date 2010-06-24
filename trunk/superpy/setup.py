@@ -9,7 +9,7 @@ setup(
     name = "superpy",
     #version = "1.1.0.dev" would be a pre-release tag of dev,
     #version = "1.1.0-p1" would be a post-release tag of -p1,    
-    version = "1.2.4",
+    version = "1.2.6",
     packages = find_packages(),
     package_dir = {'superpy.demos.pyfog' : 'superpy/demos/pyfog'},
     package_data={'superpy.demos.pyfog' : ['defaults/*.txt']},
@@ -62,6 +62,10 @@ While superpy is currently used in production for a number of different purposes
 For a quick example of some of the the things superpy can do, check out http://code.google.com/p/superpy/wiki/Demos or in particular the demo application PyFog at http://code.google.com/p/superpy/wiki/PyFog.
 
 To install, you can use easy_install to try superpy via "easy_install superpy" or download a python egg from http://code.google.com/p/superpy/downloads. Of course, you will need python installed and if you are using windows, you should also install the python windows tools from http://sourceforge.net/projects/pywin32/files. See http://code.google.com/p/superpy/wiki/InstallFAQ if you have more questions about installation.
+
+Release notes for version 1.2.6:
+
+ * Minor changes to support python 2.6.
 """
     
     # could also include long_description, download_url, classifiers, etc.
