@@ -430,7 +430,7 @@ class ScriptPage(HelperPage):
         
         """
         try:
-            Flash(dict(info.itemList)['autoRunAt'])
+            flashOff = Flash(dict(info.itemList)['autoRunAt'])
             if (info.enable.get() and info.period.ActivateP()):
                 logging.info('Auto-activating script %s' % script)
                 try: # Do a show to refresh status
@@ -453,6 +453,8 @@ class ScriptPage(HelperPage):
             ''' % (script, e, errTrace), email=True)
             info.period = Periodicity.NoPeriod(None)
             info.autoRunAt.set('invalid')
+        finally:
+            flashOff()
 
 
     def Launch(self, info, useSetServer=False):
@@ -1427,35 +1429,38 @@ class TaskInfo:
                                'period','handle','enable']]
         return 'TaskInfo(%s)' % ','.join(params)
 
-def Flash(item, times=1, delay=1, color='white'):
+def Flash(item, color='white'):
     """Make an Tk widget flash.
     
     INPUTS:
     
     -- item:        A Tk widget that has a config method we can use.
     
-    -- times=1:     How many times to flash.   
-    
-    -- delay=1:     How long to stay lit up when doing a flash.   
-    
     -- color='white':        Color to flash as.
     
     -------------------------------------------------------
     
-    PURPOSE:    Make a TK widget flash.
+    PURPOSE:    Make a TK widget flash by changing to the given color.
+
+    -------------------------------------------------------
+
+    RETURNS:    Returns a callable object which must be called to turn
+                the widget off. Caller should call this once done working
+                witht he widget or set a timer to call it after some
+                desired delay.
+
+                Older versions used to launch a thread to turn off the
+                flash but this caused internal errors in Tk 8.5 on
+                Windows in Python 2.6 so it was replaced with this
+                version.
     
     """
-    if (times <= 0):
-        return
-    
     origColor = item.config()['background'][-1]
 
     item.config(bg=color)
-    t = threading.Timer(
-        delay, lambda : (item.config(bg=origColor)
-                         and Flash(item, times-1, delay, color)))
-    t.start()
-    return t
+    flashOff = lambda : item.config(bg=origColor)
+                         
+    return flashOff
 
 def _test():
     "Test docstrings"
