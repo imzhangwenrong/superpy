@@ -29,8 +29,16 @@ class _PicklingMethod(xmlrpclib._Method):
         args = [cPickle.dumps(a) for a in args]
         #Uncomment below for debug logging. This can print lots of junk...
         #logging.debug('Pickled args=\n    %s\n' % '\n    '.join(args))
+
         result = xmlrpclib._Method.__call__(self,*args)
-        result = cPickle.loads(result)
+        try:
+            result = cPickle.loads(result)
+        except Exception, e:
+            msg = 'Unable to load pickled result:\n%s\n\nGot Exception:\n%s' % (
+                result, e)
+            logging.warning(msg)
+            result = RemoteException(msg)
+
         if (isinstance(result,RemoteException)): raise result
         else: return result
 

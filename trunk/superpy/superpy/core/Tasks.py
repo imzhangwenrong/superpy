@@ -598,7 +598,17 @@ class ImpersonatingTask(BasicTask):
                 'finished running remoteTask %s: got %s' % (
                 self.targetTask, self.result))
         except Exception, e:
-            self.result = 'Got Exception in Tasks.py: %s\n' % (str(e))
+            try:
+                extraMsg = '<unable to get more info>'#should get overwritten
+                extraMsg = Process.MakeErrTrace(e)
+                topDir = os.listdir(sys.path[0])
+            except Exception, eAgain:
+                topDir = 'Got Exception again in Tasks.py: %s' % str(eAgain)
+                msg ='Got exception in Tasks.py:\n%s\nenv=%s\npath=%s\n%s\n%s'%(
+                    str(e),'\n'.join(map(str,os.environ.items())),
+                    '\n'.join(sys.path),
+                    ('os.listdir(%s)=%s'%(sys.path[0],topDir)), extraMsg)
+            self.result = 'Got Exception in Tasks.py: %s\n' % msg
             if (reRaise):
                 raise
                     
