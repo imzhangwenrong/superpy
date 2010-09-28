@@ -16,10 +16,7 @@ documentation for those classes for details.
 
 import xmlrpclib, cPickle, sys, logging, traceback
 from SimpleXMLRPCServer import SimpleXMLRPCServer
-
-class RemoteException(Exception):
-    """Exception that occured on remote server.
-    """
+from SuperExceptions import RemoteException
 
 class _PicklingMethod(xmlrpclib._Method):
     """Modifies xmlrpclib._Method to pickle params and report remote exceptions.
