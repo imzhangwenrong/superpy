@@ -308,12 +308,20 @@ class BasicRPCServer(PicklingXMLRPC.PicklingXMLRPCServer,
         self.UpdateActives()
 
         return 0
+    
+    def EstWaitTime(self, priority):
+        """
+        Return the estimated wait time for a task with the input priority
+        if it's submitted to this server.
+        """
+        raise NotImplementedError()
 
     def CPULoad(self):
         """Return number of unfinished tasks minus number of cpus.
 
         This is a rough measure of how loaded the server is and is used
         by the Scheduler class.
+        #FIXME may be replaced by EstWaitTime
         """
         
         count = sum([1 if (not task.finished.isSet()) else 0
@@ -385,6 +393,21 @@ class BasicRPCServer(PicklingXMLRPC.PicklingXMLRPCServer,
         self.UpdateActives()
         
         return [name for (name, _task) in tasksToClean]
+    
+    @staticmethod
+    def _NextTask(pendingItems):
+        """
+        return the earliest task with the highest priority in the pendingItems,
+        which is implicitely sorted by submission time.
+        """
+        maxPriority = None
+        nextTask = None
+        for name, task in pendingItems:
+            priority = task.clientTask.Priority()
+            if maxPriority is None or maxPriority < priority:
+                maxPriority = priority
+                nextTask = (name, task)
+        return nextTask
 
     def UpdateActives(self):
         """Updates which tasks are active and spawns new tasks if necessary.
@@ -410,7 +433,7 @@ class BasicRPCServer(PicklingXMLRPC.PicklingXMLRPCServer,
                 if (len(pendingItems) == 0):
                     break # nothing left to start
                 else:
-                    name, task = pendingItems[0]                    
+                    name, task = self._NextTask()
                     logging.debug('Starting task %s: %s' % (name, task))
                     task.callbacks.append(UpdateActivesCallback(self))
                     task.start()

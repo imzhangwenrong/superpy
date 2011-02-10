@@ -264,14 +264,34 @@ class EmailingCallback(BasicCallback):
 class BasicTask:
     """Skeleton for basic task.
     """
+    @staticmethod
+    def _DefaultPriority():
+        """
+        return a low priority by default
+        """
+        return -1000
+    
+    @staticmethod
+    def _DefaultEstRunTime():
+        """
+        return a long 8 hour estimated run time by default
+        """
+        return 8*3600
 
     # The parameters property controls what _MakeRepr shows.
-    parameters = ['name','user'] #sub-classes may add to this
+    # sub-classes may add to this
+    parameters = ['name','priority', 'estRunTime', 'user'] 
 
-    def __init__(self,name,user=None):
+    def __init__(self, name, priority = None, estRunTime = None, user=None):
         if (user is None):
             user = os.getenv('USER',os.getenv('USERNAME','unknown'))        
         self.name = name
+        self.priority = priority
+        if self.priority is None:
+            self.priority = self._DefaultPriority()
+        self.estRunTime = estRunTime
+        if self.estRunTime is None:
+            self.estRunTime = self._DefaultEstRunTime()
         self.result = None
         self.user = user
 
@@ -291,6 +311,21 @@ class BasicTask:
         """Must return a unique name for the task.
         """
         return self.name
+    
+    def Priority(self):
+        """
+        return a number (could be float) representing
+        the priority of the task.
+        larger number indicates higher priority.
+        """
+        return self.priority
+    
+    def EstRunTime(self):
+        """
+        return a number (could be float) indicating
+        the estimated run time in seconds of the task.
+        """
+        return self.estRunTime
 
     def Stop(self):
         "Stop running the task"
