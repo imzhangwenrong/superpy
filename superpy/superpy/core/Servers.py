@@ -53,16 +53,16 @@ class Scheduler:
         
         """
         assert None != task.Name(), 'Task must have a name!'
-        logging.debug('Requesting loads from known servers.')
+        logging.debug('Requesting estWaitTimes from known servers.')
         newtimeout = 30
-        loads = []
+        estWaitTimes = []
         for (k,v) in self.hosts.iteritems():
             try:
                 oldtimeout = socket.getdefaulttimeout()
                 socket.setdefaulttimeout(
                     newtimeout) # set timeout in case server dead
                 logging.debug('Contacting %s:%s...' % (str(k), str(v)))
-                cpuLoad = v.CPULoad()
+                estWaitTime = v.EstWaitTime(task.priority)
             except socket.error, e:
                 logging.warning('Unable to contact %s:%s because %s;skipping'% (
                     str(k),str(v),str(e)))
@@ -70,19 +70,20 @@ class Scheduler:
                 logging.warning('Unable to contact %s:%s because %s;skipping'% (
                     str(k),str(v),str(e)))
             else:
-                loads.append((k, v, cpuLoad))
-                logging.debug('Got load of %s from %s:%s' % (loads[-1],k,v))
+                estWaitTimes.append((k, v, estWaitTime))
+                logging.debug(
+                    'Got estWaitTime of %s from %s:%s'%(estWaitTimes[-1],k,v))
                 socket.setdefaulttimeout(oldtimeout)
             finally:
                 socket.setdefaulttimeout(oldtimeout)
                 
-        if len(loads) < 1:
+        if len(estWaitTimes) < 1:
             raise Exception(
                 'No server can be reached in %s seconds, re-try later'
                 %newtimeout)
-        loads.sort(key=lambda entry: entry[2])
-        logging.debug('Loads are %s' % str(loads))
-        handle = loads[0][1].Submit(task,*args,**kw)
+        estWaitTimes.sort(key=lambda entry: entry[2])
+        logging.debug('Loads are %s' % str(estWaitTimes))
+        handle = estWaitTimes[0][1].Submit(task,*args,**kw)
         return handle
 
     def ShowQueue(self, host, port, timeout=3):
@@ -120,9 +121,9 @@ class BasicRPCServer(PicklingXMLRPC.PicklingXMLRPCServer,
 
     # The following list of functions are the ones that we allow to be
     # called via RPC.
-    _RPCFunctions = ['Submit','Terminate','RemoveFromQueue','Status',
-                     'CountNumCPUs','CPULoad','ShowQueue', 'CleanFromQueue',
-                     'CleanOldTasks']
+    _RPCFunctions = [
+        'Submit','Terminate','RemoveFromQueue','Status', 'CountNumCPUs',
+        'EstWaitTime','ShowQueue', 'CleanFromQueue', 'CleanOldTasks']
     defaultPort = 9287
     def __init__(self,cpus=None,host=None,port=None, *args, **kw):
         """Initializer.
@@ -311,23 +312,19 @@ class BasicRPCServer(PicklingXMLRPC.PicklingXMLRPCServer,
     
     def EstWaitTime(self, priority):
         """
-        Return the estimated wait time for a task with the input priority
-        if it's submitted to this server.
+        Return the estimated wait time (in seconds) for a task
+        with the input priority if it's submitted to this server.
         """
-        raise NotImplementedError()
-
-    def CPULoad(self):
-        """Return number of unfinished tasks minus number of cpus.
-
-        This is a rough measure of how loaded the server is and is used
-        by the Scheduler class.
-        #FIXME may be replaced by EstWaitTime
-        """
-        
-        count = sum([1 if (not task.finished.isSet()) else 0
-                     for (_name,task) in self._queue.ShowItems()])
-        return count - self._cpus
-
+        now = datetime.datetime.now()
+        runtime = lambda task: task.clientTask.EstRunTime()
+        higherPriority = lambda task: task.clientTask.Prioirty() >= priority
+        estWaitTime = sum([
+            max(0, runtime(task) - (now - task.starttime).seconds)
+            for _name, task in self._active.ShowItems()])
+        estWaitTime += sum([
+            runtime(task) for _name, task in self._queue.ShowItems()
+            if higherPriority(task) and not task.started.isSet()])
+        return estWaitTime / self._cpus
 
     def ShowQueue(self,regexp='.*',timeout=0):
         """Show all tasks in the queue.
