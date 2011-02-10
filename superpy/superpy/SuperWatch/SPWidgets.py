@@ -169,16 +169,20 @@ class TaskPage(HelperPage):
         if ('itemFrame' in frame.children):
             frame.children['itemFrame'].destroy()
 
-        headers = ['name', 'action', 'server', 'status', 'started', 'finished',
-                   'autoRunAt']
+        headers = [
+            'name', 'action', 'server', 'status', 'started', 'finished',
+            'autoRunAt', 'priority', 'estRunTime']
         hColDict = dict([(h, c) for (c, h) in enumerate(headers)])
         mainFrame = Tkinter.Frame(frame, name='itemFrame')
         for h in headers:
             Tkinter.Label(mainFrame,text=h).grid(row=0,column=hColDict[h])
         for (row, task) in enumerate(allTasks):
             server = '%s:%s' % (task.host, task.port)
+            priority = task.clientTask.Priority()
+            estRunTime = task.clientTask.EstRunTime()
             info = self.master.MakeTaskItems(
-                mainFrame, task.Name(),[server], server, None)
+                mainFrame, task.Name(),[server], server, None,
+                priority, estRunTime)
             if (task.Name() not in self.commands):
                 self.commands[task.Name()] = {}
             self.commands[task.Name()][server] = info
@@ -303,7 +307,7 @@ class ScriptPage(HelperPage):
         varDict.update(os.environ)
         scripts = []
         headers = ['scriptName', 'scriptFile', 'autoRunAt', 'workingDir',
-                   'server', 'page']
+                   'server', 'page', 'priority', 'estRunTime']
         fd = open(scriptFile, 'rb')
         reader = csv.reader(fd)
         line = reader.next()
@@ -340,8 +344,9 @@ class ScriptPage(HelperPage):
         
         """
         self.commands = {} # forget all previous script commands
-        headers = ['enable', 'name', 'action', 'server', 'status',
-                   'started', 'finished', 'autoRunAt']
+        headers = [
+            'enable', 'name', 'action', 'server', 'status',
+            'started', 'finished', 'autoRunAt', 'priority', 'estRunTime']
         hColDict = dict([(h, c) for (c, h) in enumerate(headers)])
         mainFrame = self.frame
 
@@ -374,7 +379,8 @@ class ScriptPage(HelperPage):
                 ''' % scriptName)
             info = self.master.MakeTaskItems(
                 pageFrames[params['page']], scriptName, serverOptions,
-                params['server'],params['scriptFile'], params['period'],
+                params['server'], params['scriptFile'], params['priority'],
+                params['estRunTime'], params['period'],
                 1 + numItems[params['page']])
             if (scriptName not in self.commands):
                 self.commands[scriptName] = {}
@@ -493,13 +499,16 @@ class ScriptPage(HelperPage):
             if (workingDir in ['None',None,'','<default>']):
                 workingDir = os.path.dirname(params['scriptFile'])
             task = Tasks.ImpersonatingTask(
-                targetTask=Tasks.ImportPyTask(
-                fileName=params['scriptFile'],name=info.name),
-                workingDir=workingDir,
-                domain=self.master.GetParam('domain'),
-                password=self.master.GetParam('password'),
-                user=self.master.GetParam('user'),
-                name=info.name,mode='createProcess')
+                targetTask = Tasks.ImportPyTask(
+                    fileName = params['scriptFile'], name = info.name),
+                workingDir = workingDir,
+                domain = self.master.GetParam('domain'),
+                password = self.master.GetParam('password'),
+                user = self.master.GetParam('user'),
+                mode = 'createProcess',
+                name = info.name,
+                priority = params['priority'],
+                estRunTime = params['estRunTime'])
 
             if (useSetServer):
                 server = info.server.get()                
@@ -889,7 +898,7 @@ class MasterMonitor:
             del commands[key[1]][key[2]]
 
     def MakeTaskItems(self, frame, taskName, serverOptions, defaultServer,
-                      scriptFile, period=None, row=None):
+                      scriptFile, priority, estRunTime, period=None, row=None):
         """Make item representing the given task in the given frame.
         
         INPUTS:
@@ -1028,7 +1037,8 @@ class LaunchTasksCmd(GUIUtils.GenericGUICommand):
     '''This command launches an arbitrary script on a remote server.
     '''
 
-    def __init__(self, monitor, host, port=9287):
+    def __init__(
+        self, monitor, host, priority = None, estRunTime = None, port=9287):
         self.monitor = monitor
         
         GUIUtils.GenericGUICommand.__init__(
@@ -1041,7 +1051,11 @@ class LaunchTasksCmd(GUIUtils.GenericGUICommand):
             Python script to run remotely.'''),
             ('taskName',GUIValidators.StringValidator('myTask_%s'%time.time()),
              '''String name for task.'''),
-            ])
+            ('priority',GUIValidators.FloatValidator(priority),'''
+            Float priority of the task.'''),
+             ('estRunTime',GUIValidators.FloatValidator(estRunTime),'''
+            Float estimated run time of the task.'''),
+           ])
 
     def _DoCommand(self):
         """Do the work of the command.
@@ -1052,13 +1066,16 @@ class LaunchTasksCmd(GUIUtils.GenericGUICommand):
         taskScript = self.argDict['taskScript']['value']
         taskName = self.argDict['taskName']['value']
         task = Tasks.ImpersonatingTask(
-            targetTask=Tasks.ImportPyTask(
-            fileName=taskScript,name=taskName),
-            workingDir=os.path.dirname(taskScript),
-            domain=self.monitor.GetParam('domain'),
-            password=self.monitor.GetParam('password'),
-            user=self.monitor.GetParam('user'),name=taskName,
-            mode='createProcess')
+            targetTask = Tasks.ImportPyTask(
+                fileName = taskScript, name = taskName),
+            workingDir = os.path.dirname(taskScript),
+            domain = self.monitor.GetParam('domain'),
+            password = self.monitor.GetParam('password'),
+            user = self.monitor.GetParam('user'),
+            mode = 'createProcess'
+            name = taskName,
+            priority = self.argDict['priority']['value'],
+            estRunTime = self.argDict['estRunTime']['value'])
         _handle = self.monitor.helpers['Servers'].SubmitTask(
             task, '%s:%i'%(host,port))
 
@@ -1334,8 +1351,10 @@ class TaskInfo:
     and automatically get updated by calling self.SetFromHandle.
     """
 
-    def __init__(self,name,defaultServer,status='unknown',started='unknown',
-                 finished='unknown',enable=1,period=None,handle=None):
+    def __init__(
+        self, name, defaultServer, priority, estRunTime,
+        status='unknown', started='unknown', finished='unknown',
+        enable=1,period=None,handle=None):
         """Initializer.
         
         INPUTS:
@@ -1343,6 +1362,10 @@ class TaskInfo:
         -- name:       String name of task.
 
         -- defaultServer:  String name of default server to use.
+        
+        -- priority: Priority of the task
+        
+        -- estRunTime: estimated run time of the tak
         
         -- status='unknown':        Status of task.
         
@@ -1361,6 +1384,8 @@ class TaskInfo:
         if (period is None):
             period = Periodicity.NoPeriod(None)
         self.name = name
+        self.priority = priority
+        self.estRunTime = estRunTime
         self.status = Tkinter.StringVar(value=status)
         self.defaultServer = defaultServer
         self.server = Tkinter.StringVar(value=defaultServer)
@@ -1424,9 +1449,11 @@ class TaskInfo:
                           else finished.strftime('%Y-%m-%d %H:%M:%S'))
 
     def __repr__(self):
-        params = ['%s=%s' % (name, repr(getattr(self,name)))
-                  for name in ['name','status','server','started','finished',
-                               'period','handle','enable']]
+        params = [
+            '%s=%s'%(name, repr(getattr(self,name)))
+            for name in [
+                'name', 'priority', 'estRunTime', 'status','server',
+                'started','finished', 'period','handle','enable']]
         return 'TaskInfo(%s)' % ','.join(params)
 
 def Flash(item, color='white'):
