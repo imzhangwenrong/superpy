@@ -62,7 +62,14 @@ class Scheduler:
                 socket.setdefaulttimeout(
                     newtimeout) # set timeout in case server dead
                 logging.debug('Contacting %s:%s...' % (str(k), str(v)))
-                estWaitTime = v.EstWaitTime(task.priority)
+                # maintain backward compatibility,
+                # old servers have CPULoad instead of EstWaitTime
+                logging.info('has cpuload = %s'%hasattr(v, 'CPULoad'))
+                logging.info('has EstWaitTime = %s'%hasattr(v, 'EstWaitTime'))
+                if hasattr(v, 'CPULoad'):
+                    estWaitTime = v.CPULoad()
+                else:
+                    estWaitTime = v.EstWaitTime(task.priority)
             except socket.error, e:
                 logging.warning('Unable to contact %s:%s because %s;skipping'% (
                     str(k),str(v),str(e)))
