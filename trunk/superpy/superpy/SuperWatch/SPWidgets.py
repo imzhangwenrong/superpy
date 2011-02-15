@@ -942,6 +942,8 @@ class MasterMonitor:
         started = Tkinter.Label(frame, textvariable=info.started)
         finished = Tkinter.Label(frame, textvariable=info.finished)
         autoRunAt = Tkinter.Label(frame, textvariable=info.autoRunAt)
+        priority = Tkinter.Label(frame, text=priority)
+        estRunTime = Tkinter.Label(frame, text=estRunTime)
         serverMenu = Tkinter.OptionMenu(frame, info.server,*serverOptions)
         itemName = Tkinter.Label(frame, text=taskName)
         menuButtonFrame = Tkinter.Frame(frame,borderwidth=1,relief='raised')
@@ -949,8 +951,6 @@ class MasterMonitor:
         menu = Tkinter.Menu(menuButton, tearoff=0)
         menuButton.configure(menu=menu)
         menuButton.configure(text='Actions')
-        priority = Tkinter.Label(frame, textvariable=info.priority)
-        estRunTime = Tkinter.Label(frame, textvariable=info.estRunTime)
         if (scriptFile):
             ballon.bind(itemName, 'Run script in %s' % scriptFile)
             menu.add_command(
