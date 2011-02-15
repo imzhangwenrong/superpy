@@ -170,8 +170,8 @@ class TaskPage(HelperPage):
             frame.children['itemFrame'].destroy()
 
         headers = [
-            'name', 'action', 'server', 'status', 'started', 'finished',
-            'autoRunAt', 'priority', 'estRunTime']
+            'name', 'action', 'server', 'priority', 'estRunTime',
+            'status', 'started', 'finished']
         hColDict = dict([(h, c) for (c, h) in enumerate(headers)])
         mainFrame = Tkinter.Frame(frame, name='itemFrame')
         for h in headers:
@@ -183,9 +183,8 @@ class TaskPage(HelperPage):
             priority = getattr(task, 'priority', 'unknown')
             estRunTime = getattr(task, 'estRunTime', 'unknown')
             
-            info = self.master.MakeTaskItems(
-                mainFrame, task.Name(),[server], server, None,
-                priority, estRunTime)
+            info = self.master._ServerSideTaskItems(
+                mainFrame, task.Name(), server, priority, estRunTime)
             if (task.Name() not in self.commands):
                 self.commands[task.Name()] = {}
             self.commands[task.Name()][server] = info
@@ -348,8 +347,8 @@ class ScriptPage(HelperPage):
         """
         self.commands = {} # forget all previous script commands
         headers = [
-            'enable', 'name', 'action', 'server', 'status',
-            'started', 'finished', 'autoRunAt', 'priority', 'estRunTime']
+            'enable', 'name', 'action', 'server', 'priority', 'estRunTime',
+            'status', 'started', 'finished', 'autoRunAt']
         hColDict = dict([(h, c) for (c, h) in enumerate(headers)])
         mainFrame = self.frame
 
@@ -380,7 +379,7 @@ class ScriptPage(HelperPage):
                 params['autoRunAt'],failureMsgPrefix='''
                 Could not parse period for script %s. Using Never.
                 ''' % scriptName)
-            info = self.master.MakeTaskItems(
+            info = self.master._ClientSideTaskItems(
                 pageFrames[params['page']], scriptName, serverOptions,
                 params['server'], params['scriptFile'], params['priority'],
                 params['estRunTime'], params['period'],
@@ -899,9 +898,80 @@ class MasterMonitor:
         for key in keysToRemove:
             del commands[key[1]][key[2]]
 
-    def MakeTaskItems(self, frame, taskName, serverOptions, defaultServer,
-                      scriptFile, priority, estRunTime, period=None, row=None):
-        """Make item representing the given task in the given frame.
+    def _ServerSideTaskItems(
+        self, frame, taskName, server, priority, estRunTime, row=None):
+        """
+        Make item representing the a task retrieved from server side
+        in the given frame.
+        
+        INPUTS:
+        
+        -- frame:        Frame to create task items in.
+        
+        -- taskName:     String name of task to create.   
+        
+        -- server:  String name of the server port that the task was dispatched.
+        
+        -- priority:    the priority of the task
+        -- estRunTime: the estimated runtime of the task
+        -- row=None:       Integer row number to display for task. This must
+                           be not None for things the user can launch.
+        
+        -------------------------------------------------------
+        
+        RETURNS:        New TaskInfo instance representing the server side task.
+        
+        -------------------------------------------------------
+        
+        PURPOSE:        Create TaskInfo for new task. User may want
+                        to grid/pack result.infoList contents.
+        
+        """
+        info = TaskInfo(
+            taskName, server, priority, estRunTime, period=None,
+            enable=row is not None and self.GetParam('enableAutoRun'))
+        # use getattr to suppress pylint warning
+        ballon = getattr(Pmw,'Balloon')(frame)
+        if (row):
+            enable = Tkinter.Checkbutton(frame, variable=info.enable,text=row)
+        status = Tkinter.Label(frame, textvariable=info.status)
+        started = Tkinter.Label(frame, textvariable=info.started)
+        finished = Tkinter.Label(frame, textvariable=info.finished)
+        priority = Tkinter.Label(frame, text=priority)
+        estRunTime = Tkinter.Label(frame, text=estRunTime)
+        server = Tkinter.Label(frame, text=server)
+        itemName = Tkinter.Label(frame, text=taskName)
+
+        # action menu button
+        menuButtonFrame = Tkinter.Frame(frame,borderwidth=1,relief='raised')
+        menuButton = Tkinter.Menubutton(menuButtonFrame)
+        menu = Tkinter.Menu(menuButton, tearoff=0)
+        menuButton.configure(menu=menu)
+        menuButton.configure(text='Actions')
+        menu.add_command(label='Kill', command = GUIUtils.GenericGUICommand(
+            'Kill %s'%taskName, self.helpers['Tasks'].Kill, [info]))
+        menu.add_command(label='KillAndReset',
+                         command = GUIUtils.GenericGUICommand(
+            'KillAndReset %s'%taskName, self.helpers['Tasks'].KillAndReset,
+            [info]))
+        menu.add_command(label='Show', command = GUIUtils.GenericGUICommand(
+            'Show %s'%taskName, self.helpers['Servers'].ShowTask, [info]))
+
+        menuButton.pack(fill='x',expand=1,side='left')
+
+        info.itemList = [
+            ('status', status), ('server', server),
+            ('name', itemName), ('action', menuButtonFrame),
+            ('started', started), ('finished', finished),
+            ('priority', priority), ('estRunTime', estRunTime)]
+        if (row):
+            info.itemList = [('enable', enable)] + info.itemList
+        return info
+
+    def _ClientSideTaskItems(
+        self, frame, taskName, serverOptions, defaultServer, scriptFile,
+        priority, estRunTime, period=None, row=None):
+        """Make item representing a task at the client side in the given frame.
         
         INPUTS:
         
@@ -916,6 +986,8 @@ class MasterMonitor:
         
         -- scriptFile:  Path to file to run script or None if not launchable.
         
+        -- priority:    the priority of the task
+        -- estRunTime: the estimated runtime of the task
         -- period=None:    Period for how often to run via autoRunAt.    
         
         -- row=None:       Integer row number to display for task. This must
@@ -923,7 +995,7 @@ class MasterMonitor:
         
         -------------------------------------------------------
         
-        RETURNS:        New TaskInfo instance representing task.
+        RETURNS:        New TaskInfo instance representing a client side task.
         
         -------------------------------------------------------
         
@@ -946,17 +1018,18 @@ class MasterMonitor:
         estRunTime = Tkinter.Label(frame, text=estRunTime)
         serverMenu = Tkinter.OptionMenu(frame, info.server,*serverOptions)
         itemName = Tkinter.Label(frame, text=taskName)
+
+        # action menu button
         menuButtonFrame = Tkinter.Frame(frame,borderwidth=1,relief='raised')
         menuButton = Tkinter.Menubutton(menuButtonFrame)
         menu = Tkinter.Menu(menuButton, tearoff=0)
         menuButton.configure(menu=menu)
         menuButton.configure(text='Actions')
-        if (scriptFile):
-            ballon.bind(itemName, 'Run script in %s' % scriptFile)
-            menu.add_command(
-                label='Launch', command = GUIUtils.GenericGUICommand(
-                'Launch %s'%taskName,
-                self.helpers['Scripts'].Launch, [info, True]))
+        ballon.bind(itemName, 'Run script in %s' % scriptFile)
+        menu.add_command(
+            label='Launch', command = GUIUtils.GenericGUICommand(
+            'Launch %s'%taskName,
+            self.helpers['Scripts'].Launch, [info, True]))
         menu.add_command(label='Kill', command = GUIUtils.GenericGUICommand(
             'Kill %s'%taskName, self.helpers['Tasks'].Kill, [info]))
         menu.add_command(label='KillAndReset',
