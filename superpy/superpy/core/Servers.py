@@ -62,25 +62,36 @@ class Scheduler:
                 socket.setdefaulttimeout(
                     newtimeout) # set timeout in case server dead
                 logging.debug('Contacting %s:%s...' % (str(k), str(v)))
+                
                 # maintain backward compatibility,
                 # old servers have CPULoad instead of EstWaitTime
-                logging.info('has cpuload = %s'%hasattr(v, 'CPULoad'))
-                logging.info('has EstWaitTime = %s'%hasattr(v, 'EstWaitTime'))
-                if hasattr(v, 'CPULoad'):
-                    estWaitTime = v.CPULoad()
-                else:
+                # hasattr returns true for both so it
+                # can't detect which one is really suppoprteed.
+                # try-and-error
+                estWaitTime = None
+                try:
                     estWaitTime = v.EstWaitTime(task.priority)
+                except Exception,e:
+                    estWaitTime = None
+                
+                if estWaitTime is None:
+                    try:
+                        estWaitTime = v.CPULoad()
+                    except Exception,e:
+                        estWaitTime = None
+                        
+                if estWaitTime is None:
+                    raise Exception(
+                        'tried EstWaitTime and CPULoad with no useful result')
+                estWaitTimes.append((k, v, estWaitTime))
+                logging.debug(
+                    'Got estWaitTime of %s from %s:%s'%(estWaitTimes[-1],k,v))
             except socket.error, e:
                 logging.warning('Unable to contact %s:%s because %s;skipping'% (
                     str(k),str(v),str(e)))
             except Exception, e:
                 logging.warning('Unable to contact %s:%s because %s;skipping'% (
                     str(k),str(v),str(e)))
-            else:
-                estWaitTimes.append((k, v, estWaitTime))
-                logging.debug(
-                    'Got estWaitTime of %s from %s:%s'%(estWaitTimes[-1],k,v))
-                socket.setdefaulttimeout(oldtimeout)
             finally:
                 socket.setdefaulttimeout(oldtimeout)
                 
