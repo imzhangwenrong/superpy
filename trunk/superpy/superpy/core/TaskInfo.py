@@ -251,7 +251,7 @@ class TaskHandle(GenericProcessHandle):
 
     def __init__(self,name,started,finished,alive,host,port,result,
                  starttime,endtime,user='unknown',taskRepr='',pids=None,
-                 tokens=None):
+                 tokens=None,priority=None,estRunTime=None):
         GenericProcessHandle.__init__(self)
         if (tokens is None): tokens = []
         self.name = name
@@ -268,6 +268,8 @@ class TaskHandle(GenericProcessHandle):
         self.pids = pids
         self._stale = False
         self._tokens = tokens
+        self.priority = priority
+        self.estRunTime = estRunTime
 
         assert isinstance(host,(str,unicode)), (
             "Expected str for host; got %s of %s" % (host,type(host)))
@@ -378,7 +380,7 @@ class TaskHandle(GenericProcessHandle):
             ['    %s=%s'%(item,repr(getattr(self,item,'unknown')))
              for item in ['name','started','finished','alive','host','port',
                           'result','starttime','endtime','user',
-                          'taskRepr', 'pids']])+')\n'
+                          'taskRepr', 'pids', 'priority', 'estRunTime']])+')\n'
         return result
 
     def Cleanup(self):
@@ -426,6 +428,8 @@ class TaskHandle(GenericProcessHandle):
             'mode' : self.StatusMode(),
             'result' : self.result,
             'pids' : self.pids,
+            'priority' : getattr(self, 'priority', 'unknown'),
+            'estRunTime' : getattr(self, 'estRunTime', 'unknown'),
             }
             
 

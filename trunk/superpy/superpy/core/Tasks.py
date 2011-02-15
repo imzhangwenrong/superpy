@@ -66,7 +66,9 @@ class ServerSideTask(threading.Thread):
             self.clientTask.Name(),self.started.isSet(),self.finished.isSet(),
             self.isAlive(),self.host,self.port,self.clientTask.result,
             self.starttime,self.endtime,self.clientTask.user,
-            taskRepr=repr(self.clientTask),pids=self.clientTask.GetPids())
+            taskRepr=repr(self.clientTask),pids=self.clientTask.GetPids(),
+            priority=self.clientTask.Priority(),
+            estRunTime=self.clientTask.EstRunTime())
 
         return result
 

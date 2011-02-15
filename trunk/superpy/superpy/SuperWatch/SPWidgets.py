@@ -178,8 +178,11 @@ class TaskPage(HelperPage):
             Tkinter.Label(mainFrame,text=h).grid(row=0,column=hColDict[h])
         for (row, task) in enumerate(allTasks):
             server = '%s:%s' % (task.host, task.port)
-            priority = task.clientTask.Priority()
-            estRunTime = task.clientTask.EstRunTime()
+            
+            #backward compatibility, old servers may not have these two
+            priority = getattr(task, 'priority', 'unknown')
+            estRunTime = getattr(task, 'estRunTime', 'unknown')
+            
             info = self.master.MakeTaskItems(
                 mainFrame, task.Name(),[server], server, None,
                 priority, estRunTime)
@@ -389,7 +392,6 @@ class ScriptPage(HelperPage):
                 item.grid(row=1+numItems[params['page']], column=hColDict[name])
             numItems[params['page']] += 1
                           
-                       
         myNotebook.setnaturalsize()
 
     def CheckAutoRunScripts(self):
@@ -930,7 +932,7 @@ class MasterMonitor:
         
         """
         info = TaskInfo(
-            taskName, defaultServer, period=period,
+            taskName, defaultServer, priority, estRunTime, period=period,
             enable=row is not None and self.GetParam('enableAutoRun'))
         # use getattr to suppress pylint warning
         ballon = getattr(Pmw,'Balloon')(frame)
@@ -947,6 +949,8 @@ class MasterMonitor:
         menu = Tkinter.Menu(menuButton, tearoff=0)
         menuButton.configure(menu=menu)
         menuButton.configure(text='Actions')
+        priority = Tkinter.Label(frame, textvariable=info.priority)
+        estRunTime = Tkinter.Label(frame, textvariable=info.estRunTime)
         if (scriptFile):
             ballon.bind(itemName, 'Run script in %s' % scriptFile)
             menu.add_command(
@@ -968,7 +972,8 @@ class MasterMonitor:
             ('status', status), ('server', serverMenu),
             ('name', itemName), ('action', menuButtonFrame),
             ('started', started), ('finished', finished),
-            ('autoRunAt', autoRunAt)]
+            ('autoRunAt', autoRunAt),
+            ('priority', priority), ('estRunTime', estRunTime)]
         if (row):
             info.itemList = [('enable', enable)] + info.itemList
         return info
@@ -1072,7 +1077,7 @@ class LaunchTasksCmd(GUIUtils.GenericGUICommand):
             domain = self.monitor.GetParam('domain'),
             password = self.monitor.GetParam('password'),
             user = self.monitor.GetParam('user'),
-            mode = 'createProcess'
+            mode = 'createProcess',
             name = taskName,
             priority = self.argDict['priority']['value'],
             estRunTime = self.argDict['estRunTime']['value'])
