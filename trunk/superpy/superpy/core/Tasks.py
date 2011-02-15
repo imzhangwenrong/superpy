@@ -320,14 +320,14 @@ class BasicTask:
         the priority of the task.
         larger number indicates higher priority.
         """
-        return self.priority
+        return getattr(self, 'priority', self._DefaultPriority())
     
     def EstRunTime(self):
         """
         return a number (could be float) indicating
         the estimated run time in seconds of the task.
         """
-        return self.estRunTime
+        return getattr(self, 'estRunTime', self._DefaultEstRunTime())
 
     def Stop(self):
         "Stop running the task"
