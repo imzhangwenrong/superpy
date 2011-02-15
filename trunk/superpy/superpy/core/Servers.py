@@ -437,7 +437,7 @@ class BasicRPCServer(PicklingXMLRPC.PicklingXMLRPCServer,
                 if (len(pendingItems) == 0):
                     break # nothing left to start
                 else:
-                    name, task = self._NextTask()
+                    name, task = self._NextTask(pendingItems)
                     logging.debug('Starting task %s: %s' % (name, task))
                     task.callbacks.append(UpdateActivesCallback(self))
                     task.start()

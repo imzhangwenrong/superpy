@@ -499,17 +499,20 @@ class ScriptPage(HelperPage):
             workingDir = params['workingDir']
             if (workingDir in ['None',None,'','<default>']):
                 workingDir = os.path.dirname(params['scriptFile'])
+            priority = info.priority.get()
+            estRunTime = info.estRunTime.get()
             task = Tasks.ImpersonatingTask(
                 targetTask = Tasks.ImportPyTask(
-                    fileName = params['scriptFile'], name = info.name),
+                    fileName = params['scriptFile'], name = info.name,
+                    priority = priority, estRunTime = estRunTime),
                 workingDir = workingDir,
                 domain = self.master.GetParam('domain'),
                 password = self.master.GetParam('password'),
                 user = self.master.GetParam('user'),
                 mode = 'createProcess',
                 name = info.name,
-                priority = params['priority'],
-                estRunTime = params['estRunTime'])
+                priority = priority,
+                estRunTime = estRunTime)
 
             if (useSetServer):
                 server = info.server.get()                
