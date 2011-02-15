@@ -1014,8 +1014,8 @@ class MasterMonitor:
         started = Tkinter.Label(frame, textvariable=info.started)
         finished = Tkinter.Label(frame, textvariable=info.finished)
         autoRunAt = Tkinter.Label(frame, textvariable=info.autoRunAt)
-        priority = Tkinter.Label(frame, text=priority)
-        estRunTime = Tkinter.Label(frame, text=estRunTime)
+        priority = Tkinter.Entry(frame, textvariable=info.priority)
+        estRunTime = Tkinter.Entry(frame, textvariable=info.estRunTime)
         serverMenu = Tkinter.OptionMenu(frame, info.server,*serverOptions)
         itemName = Tkinter.Label(frame, text=taskName)
 
@@ -1462,8 +1462,8 @@ class TaskInfo:
         if (period is None):
             period = Periodicity.NoPeriod(None)
         self.name = name
-        self.priority = priority
-        self.estRunTime = estRunTime
+        self.priority = Tkinter.DoubleVar(value=priority)
+        self.estRunTime = Tkinter.DoubleVar(value=estRunTime)
         self.status = Tkinter.StringVar(value=status)
         self.defaultServer = defaultServer
         self.server = Tkinter.StringVar(value=defaultServer)
