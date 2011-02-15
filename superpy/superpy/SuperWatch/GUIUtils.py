@@ -275,6 +275,7 @@ def ComplainAboutException(e,errTrace,window=None):
     offering to show the user the error traceback if desired.
     """
     errMsg = e.__str__()
+    logging.error(errTrace[0])
 
     killWindow = False
     if (window is None):
