@@ -5,7 +5,7 @@ used to submit tasks to the best server in a group. See docs for the
 Scheduler class for details.
 """
 
-import os, socket, threading, SocketServer, logging, re, time, datetime
+import os, socket, threading, SocketServer, logging, re, time, datetime, pickle
 
 
 import Tasks, PicklingXMLRPC, SimpleXMLRPCServer, DataStructures
@@ -65,21 +65,13 @@ class Scheduler:
                 
                 # maintain backward compatibility,
                 # old servers have CPULoad instead of EstWaitTime
-                # hasattr returns true for both so it
-                # can't detect which one is really suppoprteed.
-                # try-and-error
+                methods = set(pickle.loads(v.system.listMethods()))
                 estWaitTime = None
-                try:
+                if 'EstWaitTime' in methods:
                     estWaitTime = v.EstWaitTime(task.priority)
-                except Exception,e:
-                    estWaitTime = None
-                
-                if estWaitTime is None:
-                    try:
-                        estWaitTime = v.CPULoad()
-                    except Exception,e:
-                        estWaitTime = None
-                        
+                elif 'CPULoad' in methods:
+                    estWaitTime = v.CPULoad()
+
                 if estWaitTime is None:
                     raise Exception(
                         'tried EstWaitTime and CPULoad with no useful result')
@@ -335,7 +327,7 @@ class BasicRPCServer(PicklingXMLRPC.PicklingXMLRPCServer,
         """
         now = datetime.datetime.now()
         runtime = lambda task: task.clientTask.EstRunTime()
-        higherPriority = lambda task: task.clientTask.Prioirty() >= priority
+        higherPriority = lambda task: task.clientTask.Priority() >= priority
         estWaitTime = sum([
             max(0, runtime(task) - (now - task.starttime).seconds)
             for _name, task in self._active.ShowItems()])
