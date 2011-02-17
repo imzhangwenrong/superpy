@@ -343,7 +343,10 @@ class BasicTask:
             for pid in pidList:
                 self._DoKill(pid)
         else:
-            raise Exception('Task %s is unkillable (no pids).' % self.Name())
+            raise Exception(
+                'Task %s is unkillable (no pids). '%self.Name() +
+                'This may be because remote tasks are still spawning ' +
+                'and pids are not yet available. Try again later')
         
     def _MakeRepr(self,params):
         "Make string for __repr__ based on class parameters."

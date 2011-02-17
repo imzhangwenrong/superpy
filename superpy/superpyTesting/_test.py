@@ -122,7 +122,7 @@ def Go():
             'started','finished','alive']])
 
         # Make sure the server updated its cpu load properly
-        self.assertEqual(-1,self.scheduler.hosts.values()[0].CPULoad())
+        self.assertEqual(0,self.scheduler.hosts.values()[0].EstWaitTime(0))
 
     def testRemoveTask(self):
         "Make sure we can remove tasks."
@@ -133,9 +133,11 @@ def Go():
         handle = self.scheduler.SubmitTaskToBestServer(task)
         connection = PicklingXMLRPC.PicklingServerProxy(
             'http://%s:%i' % (handle.host,handle.port))
-        self.assertEqual(0,connection.CPULoad())        
+        self.assertTrue(connection.EstWaitTime(0) > 28000)
+        #wait for task to spawn and get a pid
+        time.sleep(30)
         connection.RemoveFromQueue(handle)
-        self.assertEqual(-1,connection.CPULoad())
+        self.assertEqual(0,connection.EstWaitTime(0))
         
     def testCleanOldTasks(self):
         "Test the CleanOldTasks method."
