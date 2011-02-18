@@ -1,122 +1,13 @@
-"""Module containing code to represent a superpy server.
+"""
+Module containing code to represent a superpy server.
 
 The main class users will interact with is the Scheduler class which is
 used to submit tasks to the best server in a group. See docs for the
 Scheduler class for details.
 """
 
-import os, socket, threading, SocketServer, logging, re, time, datetime, pickle
-
-
+import os, socket, threading, SocketServer, logging, re, time, datetime
 import Tasks, PicklingXMLRPC, SimpleXMLRPCServer, DataStructures
-
-
-class Scheduler:
-    """Class representing a scheduler to balance tasks among multiple servers.
-    """
-
-    def __init__(self,hostList):
-        self.hosts = {}
-        for i in range(len(hostList)):
-            entry = hostList[i]
-            if (isinstance(entry,(str,unicode))): entry = [entry]
-            if (len(entry) == 1): host,port=entry[0],BasicRPCServer.defaultPort
-            elif (len(entry) == 2): host,port = entry
-            else:
-                raise Exception("Entry %i=%s is not a valid host,port pair." % (
-                    i,entry))
-            if ((host,port) in self.hosts):
-                raise Exception("Pair %s:%s was specified more than once." % (
-                    host, port))
-            else:
-                logging.debug('Making connection to %s' % ([host,port]))
-                connection = PicklingXMLRPC.PicklingServerProxy(
-                    'http://%s:%i' % (host,port))
-                self.hosts[(host,port)] = connection
-
-    def SubmitTaskToBestServer(self,task,*args,**kw):
-        """Submit a task to the best available server.
-        
-        INPUTS:
-        
-        -- task:        Subclass of Tasks.BasicTask to submit.
-        
-        -- *args, **kw: Passed to Submit method of best server.
-        
-        -------------------------------------------------------
-        
-        RETURNS:        Handle for newly submitted task.
-        
-        -------------------------------------------------------
-        
-        PURPOSE:        Submit a task to the best available server.
-        
-        """
-        assert None != task.Name(), 'Task must have a name!'
-        logging.debug('Requesting estWaitTimes from known servers.')
-        newtimeout = 30
-        estWaitTimes = []
-        for (k,v) in self.hosts.iteritems():
-            try:
-                oldtimeout = socket.getdefaulttimeout()
-                socket.setdefaulttimeout(
-                    newtimeout) # set timeout in case server dead
-                logging.debug('Contacting %s:%s...' % (str(k), str(v)))
-                
-                # maintain backward compatibility,
-                # old servers have CPULoad instead of EstWaitTime
-                methods = set(pickle.loads(v.system.listMethods()))
-                estWaitTime = None
-                if 'EstWaitTime' in methods:
-                    estWaitTime = v.EstWaitTime(task.priority)
-                elif 'CPULoad' in methods:
-                    estWaitTime = v.CPULoad()
-
-                if estWaitTime is None:
-                    raise Exception(
-                        'tried EstWaitTime and CPULoad with no useful result')
-                estWaitTimes.append((k, v, estWaitTime))
-                logging.debug(
-                    'Got estWaitTime of %s from %s:%s'%(estWaitTimes[-1],k,v))
-            except socket.error, e:
-                logging.warning('Unable to contact %s:%s because %s;skipping'% (
-                    str(k),str(v),str(e)))
-            except Exception, e:
-                logging.warning('Unable to contact %s:%s because %s;skipping'% (
-                    str(k),str(v),str(e)))
-            finally:
-                socket.setdefaulttimeout(oldtimeout)
-                
-        if len(estWaitTimes) < 1:
-            raise Exception(
-                'No server can be reached in %s seconds, re-try later'
-                %newtimeout)
-        estWaitTimes.sort(key=lambda entry: entry[2])
-        logging.debug('Loads are %s' % str(estWaitTimes))
-        handle = estWaitTimes[0][1].Submit(task,*args,**kw)
-        return handle
-
-    def ShowQueue(self, host, port, timeout=3):
-        """Show queue for server at given host, port.
-        """
-        try:
-            oldtimeout = socket.getdefaulttimeout()
-            socket.setdefaulttimeout(timeout) # set timeout in case server dead
-            logging.debug('Contacting %s:%s...' % (host, port))
-            connection = self.hosts[(host, port)]
-            return connection.ShowQueue()
-        except Exception, e:
-            logging.info('Timeout: Unable to contact %s:%s because %s' % (
-                str(host),str(port),str(e)))
-        finally:
-            socket.setdefaulttimeout(oldtimeout)
-
-    def CleanOldTasks(self, host, port):
-        """Call CleanOldTasks for server at given host, port.
-        """
-        connection = self.hosts[(host, port)]
-        return connection.CleanOldTasks()
-        
 
 class BasicRPCServer(PicklingXMLRPC.PicklingXMLRPCServer,
                      SocketServer.ThreadingMixIn):
@@ -505,7 +396,6 @@ class BasicRPCServer(PicklingXMLRPC.PicklingXMLRPCServer,
     def Port(self):
         "Return port server is running on."
         return self._port
-    
 
 class UpdateActivesCallback(Tasks.BasicCallback):
     """Callback to update active tasks in server.

@@ -369,7 +369,7 @@ class BasicTask:
         if (os.name == 'nt'):
             import win32api, win32process, win32con
             handle = win32api.OpenProcess(
-                1, win32con.PROCESS_TERMINATE, pid)
+                win32con.PROCESS_TERMINATE, 0, pid)
             win32process.TerminateProcess(handle, -1)
             win32api.CloseHandle(handle)
         elif hasattr(os, 'kill'):
