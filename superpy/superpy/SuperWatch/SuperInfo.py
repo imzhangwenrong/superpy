@@ -1,6 +1,6 @@
-"""Module providing useful ways of getting information about superpy cluster
 """
-
+Module providing useful ways of getting information about superpy cluster
+"""
 import re, logging, threading, datetime
 
 def SearchForTasks(scheduler, hostRE='.', portRE='.', taskRE='.',
@@ -41,7 +41,7 @@ def SearchForTasks(scheduler, hostRE='.', portRE='.', taskRE='.',
     myThreads, msg = [], []
     if (scheduler is None):
         return [], '\n'.join(msg)
-    for (host, port) in sorted(scheduler.hosts):
+    for host, port in scheduler.AllHosts():
         msg.append('\n\n********\n\n%s:%s ::\n    ' % (host, port))
         if (hostRE.search(host) and portRE.search(str(port))):
             myThreads.append(ShowHostQueue(scheduler,host,port,taskRE))
@@ -257,14 +257,8 @@ def RefreshInfo(scheduler, info, timeout=3, cache=None, idle=None):
     if (isinstance(info.handle, (str, unicode))):
         raise Exception('Got unexpected string "%s" as info.handle.' % (
             info.handle))
-    if (info.server.get() == '<local>' and info.handle is not None and
-        not info.handle.StaleP()):
-        msg = 'Updating handle for local task %s.' % info.name
-        logging.debug(msg[0])
-        info.handle = info.handle.UpdatedHandle(timeout=timeout)
-        tasks = [info.handle]
-    else:
-        tasks, msg = [], ''
+
+    tasks, msg = [], ''
 
     if (cache is None):
         cache, _msg= SearchForTasks(scheduler, taskRE='^%s$' % info.name,

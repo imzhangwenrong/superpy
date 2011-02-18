@@ -3,10 +3,10 @@
 
 import Tkinter
 import Pmw
-import csv, datetime, logging, os, traceback, sys, threading, time, smtplib
+import csv, datetime, logging, os, traceback, sys, time, smtplib
 
 import GUIValidators, GUIUtils, Periodicity, SuperInfo, MsgWindow
-from superpy.core import Servers, Tasks
+from superpy.core import Scheduler, Tasks
 
 class HelperPage:
     """Abstract class for pages of the master monitor notebook.
@@ -183,7 +183,7 @@ class TaskPage(HelperPage):
             priority = getattr(task, 'priority', 'unknown')
             estRunTime = getattr(task, 'estRunTime', 'unknown')
             
-            info = self.master._ServerSideTaskItems(
+            info = self.master.ServerSideTaskItems(
                 mainFrame, task.Name(), server, priority, estRunTime)
             if (task.Name() not in self.commands):
                 self.commands[task.Name()] = {}
@@ -379,7 +379,7 @@ class ScriptPage(HelperPage):
                 params['autoRunAt'],failureMsgPrefix='''
                 Could not parse period for script %s. Using Never.
                 ''' % scriptName)
-            info = self.master._ClientSideTaskItems(
+            info = self.master.ClientSideTaskItems(
                 pageFrames[params['page']], scriptName, serverOptions,
                 params['server'], params['scriptFile'], params['priority'],
                 params['estRunTime'], params['period'],
@@ -481,6 +481,8 @@ class ScriptPage(HelperPage):
         
         """
         logging.debug('Called launch on %s:' % str(info))
+        # must remember user selected server before the potential kill-reset
+        userSelectedServer = info.server.get()
         if (info.status.get() not in ['unknown', 'cleaned']):
             try: # try to refresh the handle
                 info.status.set('unknown') #default to unknown if ShowTask fails
@@ -514,11 +516,14 @@ class ScriptPage(HelperPage):
                 priority = priority,
                 estRunTime = estRunTime)
 
-            if (useSetServer):
-                server = info.server.get()                
+            if useSetServer:
+                # must use the user selected server before the kill-reset
+                # kill-reset will set server to script default
+                server = userSelectedServer
             else:
                 server = params['server']
-                info.server.set(server)
+                
+            info.server.set(server)
             handle = self.master.helpers['Servers'].SubmitTask(task, server)
             info.SetFromHandle(handle=handle)
         else:
@@ -531,12 +536,11 @@ class ScriptPage(HelperPage):
 class ServerPage(HelperPage):
     """Page listing all servers monitored by SuperWatch.
     """
-
     def __init__(self, master):
         HelperPage.__init__(self, master, name='Servers')
         self.servers = []
         self.scheduler = None
-
+        
     def ReloadServers(self, serverData):
         """Reload servers that the monitor knows about.
         
@@ -551,7 +555,7 @@ class ServerPage(HelperPage):
         
         """
         self.master.notebook.selectpage('Servers')
-        self.scheduler = Servers.Scheduler(serverData)
+        self.scheduler = Scheduler.Scheduler(serverData)
         self.servers = serverData
         
         for host, port in serverData:
@@ -620,13 +624,12 @@ class ServerPage(HelperPage):
             handle = self.scheduler.SubmitTaskToBestServer(task)
         elif (server == '<local>'):
             logging.debug('Running task locally; task=%s\n'% repr(task))
-            task.mode = 'subprocess'
-            handle = task.Run(wait=False)
+            handle = self.scheduler.ConnectToLocalServer().Submit(task)
         else:
             logging.debug('Submitting task to server %s; task=%s\n'
                           % (server, repr(task)))
             host, port = server.split(':'); port = int(port)
-            handle = self.scheduler.hosts[(host, port)].Submit(task)
+            handle = self.scheduler.Connection(host, port).Submit(task)
         return handle
 
     def ShowTask(self, info, timeout=3, cache=None):
@@ -736,8 +739,7 @@ class MasterMonitor:
         quitButton.pack(fill='x',expand=1,side='left')
 
         helpButton = Tkinter.Button(
-            buttonFrame, text='Help',
-            command=lambda : self.MakeMainHelpDialog())
+            buttonFrame, text='Help', command = self.MakeMainHelpDialog)
         helpButton.pack(fill='x',expand=1,side='left')
 
         return buttonFrame
@@ -768,8 +770,7 @@ class MasterMonitor:
         """
         mainFrame = Tkinter.Frame(parent, name='mainFrame')
         nameFrame = self._MakeSuperWatchNameFrame(mainFrame)
-        buttonFrame = self._MakeSuperWatchButtonFrame(
-            parent, lambda : parent.destroy())
+        buttonFrame = self._MakeSuperWatchButtonFrame(parent, parent.destroy)
         nameFrame.pack(side='top',expand=0,fill='x')
         mainFrame.pack(fill='both',expand=1,side='top')        
         window = getattr(Pmw,'PanedWidget')(
@@ -901,7 +902,7 @@ class MasterMonitor:
         for key in keysToRemove:
             del commands[key[1]][key[2]]
 
-    def _ServerSideTaskItems(
+    def ServerSideTaskItems(
         self, frame, taskName, server, priority, estRunTime, row=None):
         """
         Make item representing the a task retrieved from server side
@@ -971,7 +972,7 @@ class MasterMonitor:
             info.itemList = [('enable', enable)] + info.itemList
         return info
 
-    def _ClientSideTaskItems(
+    def ClientSideTaskItems(
         self, frame, taskName, serverOptions, defaultServer, scriptFile,
         priority, estRunTime, period=None, row=None):
         """Make item representing a task at the client side in the given frame.
