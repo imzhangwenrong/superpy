@@ -1,7 +1,7 @@
 """
 Module containing code to represent a superpy server.
 
-The main class users will interact with is the Scheduler class which is
+The main class users will interact with the Scheduler class which is
 used to submit tasks to the best server in a group. See docs for the
 Scheduler class for details.
 """
