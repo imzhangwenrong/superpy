@@ -52,10 +52,10 @@ Entering service loop forever or until killed...
     Next we instantiate an instance of the scheduler class and tell it
     about the servers we have instantiated:
 
->>> from superpy.core import Servers
+>>> from superpy.core import Scheduler
 >>> myServers = [
 ... (server1._host,server1._port),(server2._host,server2._port)]
->>> s = Servers.Scheduler(myServers)
+>>> s = Scheduler.Scheduler(myServers)
 
     Now we can submit tasks to the servers. The tasks can represent
     pretty much anything you want to do in python. The only real

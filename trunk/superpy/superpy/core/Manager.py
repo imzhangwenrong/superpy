@@ -42,7 +42,7 @@ class SimpleElementProcessor:
     for each instance as required by GenericElement. In the example below
     we set scheduler = None for simplicity. Things still work in this case
     and are all run locally in sequence. You could provide an instance of
-    superpy.core.Servers.Scheduler to spawn things in parallel.
+    superpy.core.Scheduler.Scheduler to spawn things in parallel.
 
 >>> from superpy.core import Manager
 >>> myElements = [Manager.ExampleElement(i) for i in range(4)]
@@ -75,10 +75,10 @@ Running ExampleElement_3_... to get 1.7321
 ... 
 Entering service loop forever or until killed...
 Entering service loop forever or until killed...
->>> from superpy.core import Servers
+>>> from superpy.core import Scheduler
 >>> myServers = [
 ... (server1._host,server1._port),(server2._host,server2._port)]
->>> scheduler = Servers.Scheduler(myServers)
+>>> scheduler = Scheduler.Scheduler(myServers)
 >>> myElements = [Manager.ExampleElement(i) for i in range(4)]
 >>> processor = Manager.SimpleElementProcessor(
 ... scheduler, myElements, workingDir='c:/')
