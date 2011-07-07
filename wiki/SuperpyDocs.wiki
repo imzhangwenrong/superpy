@@ -159,7 +159,7 @@ On certain versions of windows, superpy's ability to run a process as the submit
  1. Click Add User or Group, and, in the Enter the object names to select box, type the user or group name to which you want to assign the user right, and then click OK. Generally, you should add the user that will be running superpy as a service.
  1. Click OK again, and then, in the details pane, double-click Replace a process level token. This is the SE_ASSIGNPRIMARYTOKEN_NAME user right.
  1. Click Add User or Group, and, in the Enter the object names to select box, type the user or group name to which you want to assign the user right, and then click OK. Generally, you should add the user that will be running superpy as a service.
-
+ 1. If run in Windows 7, you may need to set Control Panel\System and Security\Action Center\User Account Control Setting to 'Never notify'. Otherwise you may still get the same error.
 
 
 = Detailed Documentation = 
