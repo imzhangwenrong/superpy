@@ -149,7 +149,7 @@ Once you have superpy running as a service on a given machine, you can just send
 
 Note: you will need the python windows extensions installed to use superpy on windows. See [http://code.google.com/p/superpy/wiki/InstallFAQ#Do_I_need_to_do_anything_special_on_windows? the install faq] for details. 
 
-= Make Sure Privileges Assigned Properly =
+= Make Sure Privileges Assigned Properly (On XP) =
 
 On certain versions of windows, superpy's ability to run a process as the submitting user requires you to assign certain rights to the user running superpy. If you get errors about required privileges for running {{{CreateProcessAsUser}}} (e.g., "A required privilege is not held by the client") then you need to do the following. To assign user rights to an account on the local computer do:
 
@@ -159,7 +159,10 @@ On certain versions of windows, superpy's ability to run a process as the submit
  1. Click Add User or Group, and, in the Enter the object names to select box, type the user or group name to which you want to assign the user right, and then click OK. Generally, you should add the user that will be running superpy as a service.
  1. Click OK again, and then, in the details pane, double-click Replace a process level token. This is the SE_ASSIGNPRIMARYTOKEN_NAME user right.
  1. Click Add User or Group, and, in the Enter the object names to select box, type the user or group name to which you want to assign the user right, and then click OK. Generally, you should add the user that will be running superpy as a service.
- 1. If run in Windows 7, you may need to set Control Panel\System and Security\Action Center\User Account Control Setting to 'Never notify'. Otherwise you may still get the same error.
+= Make Sure Privileges Assigned Properly (On Windows 7) =
+ 1. If run in Windows 7, the names in local security policy for which you need to assign privilege should be 'Adjust memory quotas for a process' and 'Replace a process level token' 
+ 1. You need to set Control Panel\System and Security\Action Center\User Account Control Setting to 'Never notify'. Otherwise you may still get the same error.
+
 
 
 = Detailed Documentation = 
